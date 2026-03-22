@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx whygraph prime 2>/dev/null || echo 'Before writing, modifying, or deleting code, read and follow .whygraph/INSTRUCTIONS.md'"
+            "command": "whygraph prime"
           }
         ]
       }
