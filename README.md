@@ -14,7 +14,7 @@ This isn't a hallucination problem. It's a memory problem. The agent isn't wrong
 
 Your CLAUDE.md has conventions. Beads has tasks. Your codebase has structure. But none of them carry rationale. None of them answer the question an agent actually needs answered before acting:
 
-> *Why is this shaped the way it is, and what did we try before this?*
+> _Why is this shaped the way it is, and what did we try before this?_
 
 That's what Whygraph is for.
 
@@ -48,34 +48,37 @@ Every decision has a date. The graph is the temporal history of your architectur
 Four node types. Three edge types. That's it.
 
 **Nodes**
-| Type | Description |
-|---|---|
-| `App` | Root node. One per project. |
-| `Feature` | A user-facing capability (e.g. "Auth", "Billing") |
-| `Component` | An implementation unit within a feature |
-| `Decision` | A recorded architectural fork with context and rationale |
+
+| Type        | Description                                              |
+| ----------- | -------------------------------------------------------- |
+| `App`       | Root node. One per project.                              |
+| `Feature`   | A user-facing capability (e.g. "Auth", "Billing")        |
+| `Component` | An implementation unit within a feature                  |
+| `Decision`  | A recorded architectural fork with context and rationale |
 
 **Edges**
-| Type | Description |
-|---|---|
-| `COMPOSES` | `App → Feature`, `Feature → Component`, `Component → Component` |
-| `AFFECTS` | `Decision → Feature` or `Decision → Component` |
-| `SUPERSEDES` | `Decision → Decision` (temporal chain) |
+
+| Type         | Description                                                     |
+| ------------ | --------------------------------------------------------------- |
+| `COMPOSES`   | `App → Feature`, `Feature → Component`, `Component → Component` |
+| `AFFECTS`    | `Decision → Feature` or `Decision → Component`                  |
+| `SUPERSEDES` | `Decision → Decision` (temporal chain)                          |
 
 **Decision Properties**
+
 ```typescript
 type Decision = {
-  id: string;           // e.g. "AUTH-001"
+  id: string; // e.g. "AUTH-001"
   title: string;
-  date: string;         // ISO 8601
-  context: string;      // Why this decision was needed
-  decision: string;     // What was chosen and how it was implemented
-  tradeoffs: string;    // What was gained vs. given up
+  date: string; // ISO 8601
+  context: string; // Why this decision was needed
+  decision: string; // What was chosen and how it was implemented
+  tradeoffs: string; // What was gained vs. given up
   alternatives: string; // Other approaches considered and why they were rejected
   status: "active" | "superseded" | "deprecated";
-  affects: string[];    // Node IDs this decision touches
-  supersedes?: string;  // Decision ID this replaces
-}
+  affects: string[]; // Node IDs this decision touches
+  supersedes?: string; // Decision ID this replaces
+};
 ```
 
 ### The Storage Format
@@ -114,14 +117,14 @@ Whygraph exposes a lightweight MCP server so Claude Code and any MCP-compatible 
 
 **Available tools**
 
-| Tool | Description |
-|---|---|
-| `whygraph_get_feature` | Get a feature node and all decisions that affect it |
+| Tool                     | Description                                                  |
+| ------------------------ | ------------------------------------------------------------ |
+| `whygraph_get_feature`   | Get a feature node and all decisions that affect it          |
 | `whygraph_get_decisions` | Query decisions by feature, component, date range, or status |
-| `whygraph_get_history` | Get the full decision chain for a node, ordered by date |
-| `whygraph_get_subgraph` | Get a subgraph rooted at a given node, bounded by depth |
-| `whygraph_add_decision` | Write a new decision record to the graph |
-| `whygraph_supersede` | Mark a decision superseded and link the replacement |
+| `whygraph_get_history`   | Get the full decision chain for a node, ordered by date      |
+| `whygraph_get_subgraph`  | Get a subgraph rooted at a given node, bounded by depth      |
+| `whygraph_add_decision`  | Write a new decision record to the graph                     |
+| `whygraph_supersede`     | Mark a decision superseded and link the replacement          |
 
 ### Add This to Your CLAUDE.md
 
@@ -131,7 +134,7 @@ Whygraph exposes a lightweight MCP server so Claude Code and any MCP-compatible 
 This project uses Whygraph for architectural decision tracking. Before modifying
 any feature or component, query the Whygraph MCP server:
 
-  whygraph_get_feature("<feature-name>")
+whygraph_get_feature("<feature-name>")
 
 This returns the structural context and rationale for that area of the codebase.
 Do not contradict an active decision without first recording a new one that
@@ -198,13 +201,13 @@ whygraph timeline
 
 ## How Whygraph Fits
 
-| Tool | What it stores | Whygraph's relationship |
-|---|---|---|
-| **Beads** | Task execution state (what to do next) | Complementary — Beads tracks tasks, Whygraph tracks rationale |
-| **CLAUDE.md** | Conventions and behavioral rules | Complementary — CLAUDE.md is the how, Whygraph is the why |
-| **Code-Graph-RAG** | Code structure (what exists) | Complementary — structural map vs. decision history |
-| **Structurizr** | Architecture diagrams + ADR viewer | Human-facing; not agent-queryable |
-| **Warp Drive** | Shared workflows and operational context | Different layer — procedures, not rationale |
+| Tool               | What it stores                           | Whygraph's relationship                                       |
+| ------------------ | ---------------------------------------- | ------------------------------------------------------------- |
+| **Beads**          | Task execution state (what to do next)   | Complementary — Beads tracks tasks, Whygraph tracks rationale |
+| **CLAUDE.md**      | Conventions and behavioral rules         | Complementary — CLAUDE.md is the how, Whygraph is the why     |
+| **Code-Graph-RAG** | Code structure (what exists)             | Complementary — structural map vs. decision history           |
+| **Structurizr**    | Architecture diagrams + ADR viewer       | Human-facing; not agent-queryable                             |
+| **Warp Drive**     | Shared workflows and operational context | Different layer — procedures, not rationale                   |
 
 ---
 
@@ -213,6 +216,7 @@ whygraph timeline
 Early development. The JSONL schema and MCP tool interface are stable. CLI and visualization are in progress.
 
 Contributions welcome — especially:
+
 - MCP server robustness and query optimization
 - CI integration (flag PRs that touch features with active decisions)
 - Visualization of the temporal graph
@@ -229,3 +233,7 @@ Because the only question that matters before an agent touches your codebase is 
 ## License
 
 MIT
+
+GIVING THANKS: MERGE THIS INTO README IN A PROPER FORMAT
+MATT POCOCK YT: https://www.youtube.com/@mattpocockuk
+REFERENCE VIDEO FOR 5 SKILLS: https://www.youtube.com/watch?v=EJyuu6zlQCg
