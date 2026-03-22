@@ -8,6 +8,10 @@ The role of this file is to describe common mistakes and confusion points that a
 
 This project uses beads (`bd` CLI) for task tracking. Run `bd ready` to see unblocked tasks. Run `bd show <id>` for full task details including design context and decision capture requirements.
 
+## Decision Capture
+
+This project uses whygraph for architectural decision tracking. Before writing, modifying, or deleting code, read and follow `.whygraph/INSTRUCTIONS.md`. Write staging entries to `.whygraph/staging/` for every architectural choice you make — capture decisions in real-time as you work, not at the end of a session.
+
 ## Conventions
 
 - ESM throughout — .js extensions on imports in TypeScript source

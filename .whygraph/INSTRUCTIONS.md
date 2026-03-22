@@ -100,3 +100,12 @@ deprecation notices), stage the relationship:
 ```markdown
 ## [deprecate] <old-UUID> <new-UUID>
 ```
+
+## Staging File Naming
+
+Name your staging file descriptively to avoid collisions with concurrent agents:
+- If working on a tracked task: `staging/<task-id>.md` (e.g., `staging/issue-42.md`)
+- If no task system: `staging/<descriptive-slug>.md` (e.g., `staging/auth-refactor.md`)
+- Never use generic names like `staging/decisions.md` that multiple agents might target
+
+Commit all staging files before ending your session.

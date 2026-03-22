@@ -259,3 +259,108 @@ For all other platforms, the pointer lives in a file the developer controls. If
 they modify or regenerate that file, the pointer may be lost. `whygraph init` warns
 about this and the README documents what the pointer does and how to restore it.
 This is an accepted limitation — whygraph cannot control files it doesn't own.
+
+## `whygraph prime` — Content Single Source of Truth
+
+`whygraph prime` is a CLI command that prints the condensed decision capture
+directive to stdout. It is the single source of truth for what agents need to know
+about decision capture. All delivery mechanisms consume its output.
+
+### What prime outputs (~1k tokens)
+
+- The 6-category decision recognition heuristic
+- The staging entry format and quality bar
+- Staging file naming convention (for concurrent agent safety)
+- The timing directive ("capture as you make the choice")
+- Component UUID map (if `.whygraph/uuid-map.json` exists)
+
+### What prime does NOT output
+
+- MCP tool instructions (agent may not have MCP access)
+- Structural mapping details (component/feature/ref-update)
+- Design rationale or documentation
+
+### How prime feeds delivery layers
+
+- **Claude Code SessionStart hook**: `npx whygraph prime` — output injected into
+  parent agent context automatically
+- **Cursor/Copilot static files**: `whygraph init` calls prime and writes output to
+  the platform's rules file
+- **Generic/unknown platforms**: Developer runs `whygraph prime > file.md` and
+  configures their agent to read it
+
+### prime vs INSTRUCTIONS.md
+
+INSTRUCTIONS.md is the full 102-line reference covering MCP tools, structural
+mapping, deprecation detection, and decision capture. `whygraph prime` is the
+condensed operational directive focused on what an agent needs to capture decisions
+right now.
+
+- `whygraph prime` ⊂ INSTRUCTIONS.md (prime is a subset)
+- Prime covers: recognition heuristic, staging format, quality bar, timing, naming
+- INSTRUCTIONS.md adds: MCP queries, structural mapping, ref-updates, deprecation
+
+## Sub-Agent Propagation
+
+### The Problem
+
+When an orchestrating agent spawns sub-agents (via Agent tool, worktrees, or similar
+mechanisms), those sub-agents do not inherit:
+
+- SessionStart hooks (hooks fire for the parent session only)
+- SubagentStart hooks (tested 2026-03-22 — not working in current Claude Code)
+- Skills (on-demand workflows, not ambient)
+
+Sub-agents receive only: CLAUDE.md, auto-memory, and the orchestrator's prompt.
+
+### The Solution: Layered Delivery
+
+```
+Layer 1: .whygraph/INSTRUCTIONS.md
+   │  Universal. Committed to git. Available in any worktree.
+   │  Agent reads it when pointed to it. Works everywhere.
+   │
+Layer 2: whygraph prime (CLI → stdout)
+   │  Generates condensed directive at runtime.
+   │  Consumed by hooks, scripts, init, or manual piping.
+   │
+Layer 3: Platform instruction files (auto-loaded into agent context)
+   │  Claude Code:  CLAUDE.md pointer → agent reads INSTRUCTIONS.md
+   │  Cursor:       .cursor/rules/whygraph.md (static, from prime output)
+   │  Copilot:      .github/copilot-instructions.md (static, from prime output)
+   │  Generic:      .whygraph/AGENT_CONTEXT.md (static, from prime output)
+   │
+Layer 4: Platform hooks (automatic, event-driven)
+      Claude Code:  SessionStart → npx whygraph prime
+      Git:          post-commit → npx whygraph sync (all platforms)
+```
+
+Layer 1 is the agnostic baseline — works everywhere.
+Layer 3 is the sub-agent fix for Claude Code — CLAUDE.md propagates to sub-agents.
+Layer 4 is Claude Code-only automation for the parent session.
+
+### Requirements for Reliable Sub-Agent Capture
+
+1. `.whygraph/INSTRUCTIONS.md` is committed to git (so worktrees have it)
+2. The platform's instruction file contains the whygraph pointer
+3. Staging files use distinct names (avoid collisions between concurrent agents)
+4. Sub-agents commit staging files before ending their session
+
+### What the Orchestrator Should Do
+
+The orchestrator does not need to include INSTRUCTIONS.md content in the sub-agent
+prompt — the CLAUDE.md pointer handles this automatically. The orchestrator should:
+
+1. Ensure uncommitted work is committed before creating worktrees
+2. Assign distinct staging file names if multiple agents work concurrently
+3. Merge worktree branches to collect staging files after agents complete
+
+### SubagentStart Hook Status
+
+Tested 2026-03-22: SubagentStart hooks registered in `.claude/settings.json` did
+not fire for Agent tool sub-agents (tested with both Explore and general-purpose
+agent types). Sub-agents received CLAUDE.md and auto-memory only.
+
+When SubagentStart hooks become available, register `npx whygraph prime` on that
+event. This would give sub-agents the full condensed directive automatically,
+eliminating the need for the CLAUDE.md pointer as a delivery mechanism.
