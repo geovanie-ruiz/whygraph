@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "whygraph",
+  "project_id": "ab810a01-a848-4179-b73e-7fa4f72662de"
+}
