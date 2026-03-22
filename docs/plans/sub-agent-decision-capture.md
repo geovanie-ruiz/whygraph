@@ -159,16 +159,27 @@ unless the user adds `node_modules/.bin` to PATH or uses npm scripts.
 but requires PATH setup. For now, using `whygraph prime` with the expectation
 that npm link or global install makes it available.
 
-### Test 3: Pending — new session verification
+### Test 3: New session verification — PASSED (2026-03-22)
 
-Need to restart the session and spawn a sub-agent to confirm that CLAUDE.md
-trigger works when it exists at session start. This will validate the complete
-chain: session start → CLAUDE.md loaded → sub-agent inherits trigger → sub-agent
-runs `whygraph prime` → sub-agent captures decisions.
+Restarted session and spawned a sub-agent. Results:
+
+1. **CLAUDE.md trigger visible**: Sub-agent confirmed it could see the "run
+   `whygraph prime`" instruction both from system-reminder context (which includes
+   CLAUDE.md contents) and via direct file read.
+2. **`whygraph prime` executed successfully**: `npx whygraph prime` returned the
+   full agent instructions including decision capture format, component UUIDs,
+   and all six decision recognition categories.
+3. **Staging entry written**: Sub-agent created `.whygraph/staging/subagent-test-3.md`
+   demonstrating end-to-end capability.
+
+**Conclusion:** The complete chain works: session start → CLAUDE.md loaded →
+sub-agent inherits trigger → sub-agent runs `whygraph prime` → sub-agent receives
+full instructions → sub-agent can write staging entries. The CLAUDE.md conditional
+trigger is a reliable delivery mechanism for sub-agents.
 
 ## What Remains
 
-- [ ] Restart session and verify sub-agent receives CLAUDE.md trigger (Test 3)
+- [x] Restart session and verify sub-agent receives CLAUDE.md trigger (Test 3) — PASSED
 - [ ] Refactor prime to not include UUID map once MCP server is functional (bead 13)
 - [ ] Write worktree advisory guidance in documentation
 - [ ] Document in init output: "restart your session for sub-agents to receive the trigger"
