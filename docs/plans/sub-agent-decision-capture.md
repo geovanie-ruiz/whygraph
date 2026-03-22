@@ -1,179 +1,134 @@
 # Plan: Sub-Agent Decision Capture & Multi-Agent Reliability
 
-## Context
+## Status: Implemented
 
-When the orchestrating agent spawns sub-agents via the Agent tool (with or without worktree isolation), those sub-agents don't inherit SessionStart hooks or skills. In our recent experience, two sub-agents implemented beads 3 and 6 without the decision capture framework — they captured 5 decisions each instead of 12-13, and we had to backfill retrospectively.
+Core implementation complete as of 2026-03-22. Remaining items noted at bottom.
 
-**Root cause #1**: The orchestrator didn't include INSTRUCTIONS.md content in sub-agent prompts.
-**Root cause #2**: `.whygraph/INSTRUCTIONS.md` was never committed to git, so worktree sub-agents couldn't even find it.
-**Root cause #3**: No hook or automatic mechanism injected decision capture rules into sub-agent context.
+## Problem
 
-## Validation: SubagentStart Hooks
+When an orchestrating agent spawns sub-agents, those sub-agents don't inherit
+hooks, skills, or ambient context. In our experience, sub-agents implemented
+code without the decision capture framework — capturing 5 decisions instead of
+12-13 because the instructions never reached them.
 
-**Tested 2026-03-22.** Registered a SubagentStart hook in `.claude/settings.json` that echoed a test string. Spawned two sub-agents (Explore type and general-purpose). Neither received the hook output. Sub-agents received only CLAUDE.md contents and auto-memory.
+**Root causes:**
+1. `.whygraph/INSTRUCTIONS.md` was not committed to git — worktrees didn't have it
+2. No mechanism injected decision capture rules into sub-agent context
+3. CLAUDE.md had no mention of whygraph
 
-**Conclusion**: SubagentStart hooks either don't exist yet in this Claude Code version, don't apply to Agent tool sub-agents, or use a different event name. We cannot rely on them today.
-
-**What sub-agents DO receive automatically:**
-- CLAUDE.md (project instructions)
-- Auto-memory (user's `.claude/projects/` memory files)
-- The prompt the orchestrator provides
-
-**What sub-agents DO NOT receive:**
-- SessionStart hook output
-- SubagentStart hook output (tested, not working)
-- Skills
-- AGENTS.md contents
-
-## Approach: `whygraph prime` + Layered Delivery
+## Solution: `whygraph prime` + Conditional Triggers
 
 ### `whygraph prime`
 
-A CLI command that prints the condensed decision capture directive to stdout. It is the **single source of truth** for what agents need to know about decision capture. All delivery mechanisms consume its output.
+A CLI command that prints the complete decision capture instructions to stdout.
+It is the **single source of truth** for what agents need to know. All delivery
+mechanisms point agents to run this command.
 
-`whygraph prime` prints:
-- The decision recognition heuristic (6 categories)
-- The staging entry format and quality bar
-- The staging file naming convention
-- The timing directive ("capture as you make the choice")
-- A compact version of the uuid-map for `affects:` fields (if it exists)
+Prime outputs the full instructions:
+- MCP query directive (`whygraph_context(file)` before modifying code)
+- Staleness error handling (stop and inform user)
+- Decision recognition heuristic (6 categories)
+- Staging entry format and quality bar
+- Staging file naming convention (concurrent agent safety)
+- Timing directive ("capture as you make the choice")
+- Structural mapping entries (component, feature, ref-update, deprecate, node-removed)
+- UUID map scaffold (temporary — removed when MCP is functional)
 
-It does NOT print:
-- MCP tool instructions (agent may not have MCP access)
-- Structural mapping details (component/feature/ref-update — secondary concern)
-- Design rationale or documentation
+### Conditional triggers in instruction files
 
-Target size: ~1k tokens.
+Every platform has an instruction file that agents auto-load. Whygraph writes a
+conditional trigger to that file — not a context dump. The trigger tells the
+agent WHEN to run prime:
 
-### Layered delivery model
+> Before writing, modifying, or deleting code, run `whygraph prime`.
 
-The core insight: every agent environment has some mechanism for loading instructions into context. They differ in durability, automation, and sub-agent propagation. `whygraph prime` generates the content; the delivery layer gets it to the agent.
+This achieves progressive disclosure. An agent doing research doesn't load
+whygraph instructions. An agent about to modify code runs prime and gets the
+full framework. Multiple tools can coexist in the same instruction file without
+context explosion because each only triggers when relevant.
 
-```
-Layer 1: .whygraph/INSTRUCTIONS.md
-   │  Universal. Committed to git. Available in any worktree.
-   │  Agent reads it when pointed to it. Works everywhere.
-   │
-Layer 2: whygraph prime (CLI → stdout)
-   │  Generates condensed directive at runtime.
-   │  Consumed by hooks, scripts, init, or manual piping.
-   │
-Layer 3: Platform instruction files (auto-loaded into agent context)
-   │  Claude Code:  CLAUDE.md pointer → agent reads INSTRUCTIONS.md
-   │  Cursor:       .cursor/rules/whygraph.md (static, from prime output)
-   │  Copilot:      .github/copilot-instructions.md (static, from prime output)
-   │  Generic:      .whygraph/AGENT_CONTEXT.md (static, from prime output)
-   │
-Layer 4: Platform hooks (automatic, event-driven)
-      Claude Code:  SessionStart → npx whygraph prime (injects into parent session)
-      Cursor:       (none — no hook system)
-      Git:          post-commit → npx whygraph sync (all platforms with git)
-```
+### How each platform gets the trigger
 
-**Layer 1 is the agnostic baseline.** It works in every environment that can read files. The pointer to it goes in whatever instruction file the platform auto-loads (CLAUDE.md, .cursor/rules/, copilot-instructions.md). This is the sub-agent fix for today — CLAUDE.md propagates to sub-agents, the pointer tells them to read INSTRUCTIONS.md, INSTRUCTIONS.md is committed to git so worktrees have it.
+| Platform | Instruction file | What init writes |
+|----------|-----------------|-----------------|
+| Claude Code | CLAUDE.md | Conditional trigger with `<!-- BEGIN/END WHYGRAPH -->` markers |
+| Cursor | .cursor/rules/whygraph.md | "run `whygraph prime`" |
+| Copilot | .github/copilot-instructions.md | "run `whygraph prime`" |
+| Other | Developer configures manually | "run `whygraph prime`" |
 
-**Layer 2 is the content generator.** `whygraph prime` produces the text that feeds all other layers. When `whygraph init --cursor` runs, it calls `whygraph prime` and writes the output to `.cursor/rules/whygraph.md`. When a developer wants to manually inject context into an unsupported environment, they run `whygraph prime` and paste the output. One command, many targets.
+The instruction is identical across all platforms. Only the file location differs.
 
-**Layer 3 is platform-specific static delivery.** Each platform has a file that gets auto-loaded into agent context. `whygraph init` writes to the right file for the detected (or specified) environment. For Claude Code, this is CLAUDE.md with a pointer. For Cursor, it's the rules file with the full prime output (since Cursor can't run hooks). For Copilot, it's the instructions file. For unknown platforms, it's `.whygraph/AGENT_CONTEXT.md` that the developer can include however their platform supports.
+### How sub-agents get the trigger
 
-**Layer 4 is Claude Code-specific automation.** SessionStart hook runs `whygraph prime` so the parent agent gets fresh context every session. Stop hook runs `whygraph sync`. SubagentStart would be ideal here but doesn't work today — when it does, we add it. Until then, sub-agents fall back to Layer 3 (CLAUDE.md pointer).
+**Claude Code**: sub-agents receive CLAUDE.md automatically. The conditional
+trigger in CLAUDE.md tells them to run `whygraph prime`. This works because
+CLAUDE.md is loaded before the task prompt — primacy bias ensures the agent
+treats decision capture as a standing order, not a mid-task interruption.
 
-### Sub-agent coverage by platform
+**Other platforms**: most don't have sub-agents today. When they do, their
+sub-agent context inheritance determines whether the trigger propagates. If
+the platform inherits instruction files, it works automatically.
 
-| Platform | Parent agent | Sub-agents | How sub-agents get context |
-|----------|-------------|------------|---------------------------|
-| Claude Code | Layer 4 (SessionStart hook) | Layer 3 (CLAUDE.md pointer) | CLAUDE.md propagates, agent reads INSTRUCTIONS.md |
-| Cursor | Layer 3 (.cursor/rules/) | N/A (no sub-agents) | — |
-| Copilot | Layer 3 (copilot-instructions.md) | N/A (no sub-agents) | — |
-| Generic | Layer 1 (INSTRUCTIONS.md) | Depends on platform | Developer configures per platform |
+### How `whygraph init` sets up each platform
 
-### Toward `.claude-plugin` without depending on it
+Init performs five actions:
+1. Create `.whygraph/` directory structure (universal)
+2. Seed `events.jsonl` with App node (universal)
+3. Write `config.json` with collected preferences (universal)
+4. Write conditional trigger to platform instruction file
+5. Register MCP server (platform-specific config location)
 
-`whygraph prime` mirrors `bd prime` — this is the pattern Claude Code plugins use. The lifecycle is self-contained:
-- `whygraph init` → registers hooks, writes instruction files
-- `whygraph prime` → injects context (SessionStart hook)
-- `whygraph sync` → processes staging (Stop hook)
-- `whygraph mcp` → read-only graph queries (MCP server)
+For Claude Code, init also registers a SessionStart hook that runs
+`whygraph prime` — this gives the parent agent the instructions via hook
+stdout injection, complementing the CLAUDE.md trigger for sub-agents.
 
-This is plugin-shaped without depending on a plugin spec. When `.claude-plugin` becomes real, the migration path is: move hook/skill/MCP registration into a manifest file. The CLI commands don't change.
+### SubagentStart hooks
 
-### Agnostic coverage without opinion
+Tested 2026-03-22. SubagentStart hooks in `.claude/settings.json` did not
+fire for Agent tool sub-agents (tested with Explore and general-purpose types).
+Claude's built-in agent types don't use lifecycle hooks — custom agents defined
+in `.claude/agents/` would be needed. Since defining sub-agents is a developer
+concern (not whygraph's), CLAUDE.md is the sub-agent delivery mechanism.
 
-Whygraph's design principle is "opinionated on what, agnostic on when." The delivery model extends this:
+When SubagentStart hooks work for built-in agent types, register `whygraph prime`
+on that event as an enhancement.
 
-- **Opinionated**: what to capture (6 categories), how to write it (staging format), quality bar (tradeoffs must name costs)
-- **Agnostic**: how the instructions reach the agent (hooks, files, manual injection — whygraph provides the content, the platform provides the mechanism)
+### INSTRUCTIONS.md vs prime
 
-For platforms whygraph doesn't know about, `whygraph prime > your-file.md` is the escape hatch. The developer becomes the delivery mechanism. This is acceptable because whygraph can't predict every platform, and the cost of manual injection is low (one command, run once per project setup).
+Prime is the primary mechanism. INSTRUCTIONS.md is a static reference file for
+developers who want to manually include whygraph instructions in an unsupported
+environment. The content should be the same — prime is the dynamic generator,
+INSTRUCTIONS.md is the static snapshot.
 
-## Changes
+### Worktree guidance
 
-### 1. Commit `.whygraph/` repo-native files to git
+Worktrees only contain tracked files. For sub-agents running in worktrees:
+- All `.whygraph/` repo-native files must be committed before creating worktrees
+- The worktree needs `npm install` (or access to node_modules) for `whygraph prime` to run
+- The orchestrating agent is responsible for ensuring the worktree is ready
 
-INSTRUCTIONS.md, config.json, events.jsonl, .gitignore must be tracked so worktrees have them.
+This is documented as advisory guidance, not enforced mechanically.
 
-### 2. Add whygraph pointer to CLAUDE.md
+### No enforcement mechanisms
 
-```markdown
-## Decision Capture
+If prime output is in context with primacy bias, agents follow it. The failure
+we experienced was not an agent ignoring instructions — it was an agent that
+never received them. Fixing delivery fixes compliance.
 
-This project uses whygraph for architectural decision tracking. Before writing,
-modifying, or deleting code, read and follow `.whygraph/INSTRUCTIONS.md`. Write
-staging entries to `.whygraph/staging/` for every architectural choice you make —
-capture decisions in real-time as you work, not at the end of a session.
-```
+## What's Done
 
-This is the sub-agent fix. CLAUDE.md propagates to sub-agents. The pointer tells them to read INSTRUCTIONS.md. INSTRUCTIONS.md is committed to git. The chain is: CLAUDE.md → pointer → INSTRUCTIONS.md → agent captures decisions.
+- [x] `whygraph prime` CLI command — outputs full instructions to stdout
+- [x] SessionStart hook runs `whygraph prime` (no fallback)
+- [x] CLAUDE.md has conditional trigger with markers
+- [x] INSTRUCTIONS.md has staging file naming convention
+- [x] AGENT_INSTRUCTION_DESIGN.md documents layered delivery and sub-agent propagation
+- [x] AGENTS.md trimmed (beads owns its block via `bd setup claude`)
+- [x] `.whygraph/` repo-native files committed to git
+- [x] SubagentStart hooks tested and documented as non-functional
 
-### 3. Build `whygraph prime` CLI command
+## What Remains
 
-New file: `src/cli/prime.ts`
-
-Reads config and uuid-map, prints condensed directive to stdout. This is the single source of truth that feeds all delivery mechanisms.
-
-### 4. Update SessionStart hook to use `whygraph prime`
-
-Replace the current echo pointer with `npx whygraph prime`. This gives the parent agent the full condensed directive instead of just a pointer.
-
-### 5. Add staging file naming guidance to INSTRUCTIONS.md
-
-Prescribe naming convention to avoid collisions between concurrent sub-agents.
-
-### 6. Update AGENT_INSTRUCTION_DESIGN.md
-
-Document:
-- The `whygraph prime` command and its role as content SSOT
-- The layered delivery model
-- SubagentStart hook status (tested, not working, will add when available)
-- Cross-platform delivery strategy
-- The escape hatch for unknown platforms
-
-### 7. AGENTS.md cleanup
-
-Replace the beads integration block with a lean pointer to `bd prime`.
-
-## Files
-
-| File | Change |
-|------|--------|
-| `src/cli/prime.ts` | New — the prime command |
-| `src/cli/index.ts` | Add prime subcommand |
-| `.claude/settings.json` | Update SessionStart to use `whygraph prime` |
-| `.whygraph/INSTRUCTIONS.md` | Add staging file naming guidance |
-| `CLAUDE.md` | Add pointer (sub-agent propagation) |
-| `AGENTS.md` | Replace beads block with pointer |
-| `docs/beads/AGENT_INSTRUCTION_DESIGN.md` | Document layered delivery |
-| `.whygraph/.gitignore` | Already updated (reviews.jsonl added) |
-
-## Verification
-
-1. `npx whygraph prime` prints condensed directive to stdout
-2. `git worktree add /tmp/test-wt -b test-wt` → `/tmp/test-wt/.whygraph/INSTRUCTIONS.md` exists
-3. Spawn sub-agent → receives CLAUDE.md pointer → reads INSTRUCTIONS.md → creates staging entries with decisions
-4. `whygraph prime > /tmp/cursor-test.md` produces a file usable as Cursor rules
-
-## What This Does NOT Solve
-
-- **Compliance**: Delivery ≠ compliance. Whygraph guarantees the instructions reach the agent. Whether the agent follows them depends on instruction quality and agent capability.
-- **SubagentStart hooks**: Not working today. When they become available, add them as Layer 4 enhancement. The CLAUDE.md pointer (Layer 3) covers sub-agents until then.
-- **Unknown platforms**: Whygraph can't auto-configure platforms it doesn't know about. The `whygraph prime` escape hatch lets developers manually inject context.
+- [ ] Refactor prime to not include UUID map once MCP server is functional (bead 13)
+- [ ] Verify sub-agent capture: spawn a sub-agent, confirm it runs prime, confirm it creates staging entries
+- [ ] Write worktree advisory guidance in documentation
+- [ ] Update plan document to final state after verification
