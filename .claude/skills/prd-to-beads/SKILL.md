@@ -1,19 +1,25 @@
 ---
 name: prd-to-beads
-description: Break a PRD into independently-grabbable GitHub issues using tracer-bullet vertical slices. Use when user wants to convert a PRD to issues, create implementation tickets, or break down a PRD into work items.
+description: Break a PRD into independently-grabbable beads using tracer-bullet vertical slices. Use when user wants to convert a PRD to beads, create implementation tasks, or break down a PRD into work items.
 ---
 
-# PRD to Issues
+# PRD to Beads
 
-Break a PRD into independently-grabbable GitHub issues using vertical slices (tracer bullets).
+Break a PRD into independently-grabbable beads (tasks) using vertical slices (tracer bullets). Uses the `bd` CLI (beads) for dependency-aware task tracking.
+
+## Prerequisites
+
+- `bd` CLI installed globally (`npm install -g @beads/bd`, `brew install beads`, or `go install`)
+- Project initialized with `bd init` (check with `bd info`; if not initialized, run `bd init --quiet`)
 
 ## Process
 
 ### 1. Locate the PRD
 
-Ask the user for the PRD GitHub issue number (or URL).
-
-If the PRD is not already in your context window, fetch it with `gh issue view <number>` (with comments).
+Ask the user for the PRD source. The PRD may be:
+- A GitHub issue — fetch with `gh issue view <number>`
+- A local file — read it directly
+- Already in context from a previous conversation turn
 
 ### 2. Explore the codebase (optional)
 
@@ -21,7 +27,7 @@ If you have not already explored the codebase, do so to understand the current s
 
 ### 3. Draft vertical slices
 
-Break the PRD into **tracer bullet** issues. Each issue is a thin vertical slice that cuts through ALL integration layers end-to-end, NOT a horizontal slice of one layer.
+Break the PRD into **tracer bullet** beads. Each bead is a thin vertical slice that cuts through ALL integration layers end-to-end, NOT a horizontal slice of one layer.
 
 Slices may be 'HITL' or 'AFK'. HITL slices require human interaction, such as an architectural decision or a design review. AFK slices can be implemented and merged without human interaction. Prefer AFK over HITL where possible.
 
@@ -49,20 +55,32 @@ Ask the user:
 
 Iterate until the user approves the breakdown.
 
-### 5. Create the GitHub issues
+### 5. Create beads
 
-For each approved slice, create a GitHub issue using `gh issue create`. Use the issue body template below.
+Create beads in dependency order (blockers first) so you can reference real bead IDs when adding dependencies.
 
-Create issues in dependency order (blockers first) so you can reference real issue numbers in the "Blocked by" field.
+**Step 5a**: Create a parent epic for the PRD:
 
-<issue-template>
-## Parent PRD
+```bash
+EPIC_ID=$(bd create "PRD: <prd-title>" -t epic -p 0 --json | jq -r '.id')
+```
 
-#<prd-issue-number>
+If the PRD came from a GitHub issue, link it:
 
+```bash
+EPIC_ID=$(bd create "PRD: <prd-title>" -t epic -p 0 --external-ref "github:<owner>/<repo>#<number>" --json | jq -r '.id')
+```
+
+**Step 5b**: For each approved slice, create a bead as a child of the epic. Write the description to a temp file and pass it via `--body-file`:
+
+```bash
+# Write description to temp file
+cat > /tmp/bead-desc.md <<'DESC'
 ## What to build
 
-A concise description of this vertical slice. Describe the end-to-end behavior, not layer-by-layer implementation. Reference specific sections of the parent PRD rather than duplicating content.
+A concise description of this vertical slice. Describe the end-to-end behavior,
+not layer-by-layer implementation. Reference specific sections of the parent PRD
+rather than duplicating content.
 
 ## Acceptance criteria
 
@@ -70,19 +88,55 @@ A concise description of this vertical slice. Describe the end-to-end behavior, 
 - [ ] Criterion 2
 - [ ] Criterion 3
 
-## Blocked by
-
-- Blocked by #<issue-number> (if any)
-
-Or "None - can start immediately" if no blockers.
-
 ## User stories addressed
-
-Reference by number from the parent PRD:
 
 - User story 3
 - User story 7
+DESC
 
-</issue-template>
+# Create the bead
+BEAD_ID=$(bd create "<slice-title>" \
+  -t task \
+  -p <priority> \
+  --parent "$EPIC_ID" \
+  --label "<hitl-or-afk>" \
+  --body-file /tmp/bead-desc.md \
+  --json | jq -r '.id')
+```
 
-Do NOT close or modify the parent PRD issue.
+**Step 5c**: After creating all beads, add dependency relationships:
+
+```bash
+# Make bead-B depend on bead-A (B is blocked until A closes)
+bd dep add <bead-B-id> <bead-A-id>
+```
+
+**Priority mapping**:
+- p0: Critical path, must be done first
+- p1: High priority, core functionality
+- p2: Medium priority, important but not blocking
+- p3: Lower priority, nice to have
+- p4: Lowest priority, can defer
+
+**Labels to apply**:
+- `hitl` or `afk` — whether the slice requires human interaction
+- Component labels as appropriate (e.g., `core`, `cli`, `viz`, `mcp`)
+
+### 6. Verify the breakdown
+
+After creating all beads, verify the structure:
+
+```bash
+# Show the epic and its children
+bd list --parent "$EPIC_ID"
+
+# Confirm unblocked beads are correct starting points
+bd ready
+
+# Show any blocked beads and their blockers
+bd blocked
+```
+
+Print a summary showing each bead's ID, title, type (HITL/AFK), and blockers.
+
+Do NOT close or modify the parent PRD GitHub issue (if one exists).

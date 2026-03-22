@@ -1,0 +1,77 @@
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"1c7a8b5d-3d03-4bf8-90d0-5896d70c19b0","label":"App","properties":{"name":"Whygraph"}}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"2c4bcc79-770b-4e3c-bf51-5dbab926a874","label":"Feature","properties":{"name":"Core Graph","description":"Event log, projection, query, validation","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-ace6ff23-a3da-47bc-ac28-923d85e1279b","label":"COMPOSES","from":"1c7a8b5d-3d03-4bf8-90d0-5896d70c19b0","to":"2c4bcc79-770b-4e3c-bf51-5dbab926a874"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"7b7e43a8-2ec5-4922-89b0-861c670aa4e3","label":"Feature","properties":{"name":"Staging Pipeline","description":"Parser, resolver, processor, sessions, reviews, errors","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-773e55bb-4855-4aec-9e7a-dc45e0a48733","label":"COMPOSES","from":"1c7a8b5d-3d03-4bf8-90d0-5896d70c19b0","to":"7b7e43a8-2ec5-4922-89b0-861c670aa4e3"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"f37d7520-b8a2-4afd-8965-e621abdcc96c","label":"Feature","properties":{"name":"CLI","description":"init, sync, viz, config commands","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-ec93555a-2e57-45e0-a30d-4e1eb8657c30","label":"COMPOSES","from":"1c7a8b5d-3d03-4bf8-90d0-5896d70c19b0","to":"f37d7520-b8a2-4afd-8965-e621abdcc96c"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"d36d11eb-1ed5-4a87-b116-d5d547430a5c","label":"Feature","properties":{"name":"MCP Server","description":"stdio server with 5 read-only tools","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-98655310-8728-44dd-8364-a51c506fb9b6","label":"COMPOSES","from":"1c7a8b5d-3d03-4bf8-90d0-5896d70c19b0","to":"d36d11eb-1ed5-4a87-b116-d5d547430a5c"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"d2754c3b-a481-4dd6-adc5-6fec5cf8d342","label":"Feature","properties":{"name":"Visualization","description":"Bake engine, HTML template, D3 rendering","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-5df2cdb8-f42e-46e1-a629-c1434fdfb677","label":"COMPOSES","from":"1c7a8b5d-3d03-4bf8-90d0-5896d70c19b0","to":"d2754c3b-a481-4dd6-adc5-6fec5cf8d342"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"36ce435c-6835-45bb-819d-5cc6e9989b84","label":"Feature","properties":{"name":"Platform Integration","description":"Claude Code, Cursor, Copilot, generic prompts","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-4860d647-4ab7-40fc-823e-91ef37c92c44","label":"COMPOSES","from":"1c7a8b5d-3d03-4bf8-90d0-5896d70c19b0","to":"36ce435c-6835-45bb-819d-5cc6e9989b84"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"0f5b5a0b-0e7d-45f9-a07e-e6ad0050e58d","label":"Component","properties":{"name":"Types","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-bc54d14b-3d0c-460b-86f4-276da1e80fe8","label":"COMPOSES","from":"2c4bcc79-770b-4e3c-bf51-5dbab926a874","to":"0f5b5a0b-0e7d-45f9-a07e-e6ad0050e58d"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"cae67d95-d587-4076-bc42-7a4b12526549","label":"Component","properties":{"name":"Event Log","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-5c9279f1-e84f-4f38-acc1-b12e85036aef","label":"COMPOSES","from":"2c4bcc79-770b-4e3c-bf51-5dbab926a874","to":"cae67d95-d587-4076-bc42-7a4b12526549"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"1e71165b-8aed-40ba-819e-cac4dd406ae4","label":"Component","properties":{"name":"Projection","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-db85042b-cfc1-4347-a218-134d98cbdb40","label":"COMPOSES","from":"2c4bcc79-770b-4e3c-bf51-5dbab926a874","to":"1e71165b-8aed-40ba-819e-cac4dd406ae4"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"9a3675d7-3c0d-4849-825d-2835cf73e912","label":"Component","properties":{"name":"Query","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-2a5552d8-5078-4117-b58a-b8073e262074","label":"COMPOSES","from":"2c4bcc79-770b-4e3c-bf51-5dbab926a874","to":"9a3675d7-3c0d-4849-825d-2835cf73e912"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"8369c4de-aa78-425e-9bed-bf946e27efa6","label":"Component","properties":{"name":"Validation","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-5dc96a1d-ff2c-4c9e-aa3d-e767571f6416","label":"COMPOSES","from":"2c4bcc79-770b-4e3c-bf51-5dbab926a874","to":"8369c4de-aa78-425e-9bed-bf946e27efa6"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"420e30c0-4f43-4d50-81d1-5fba452df252","label":"Component","properties":{"name":"Parser","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-d1f28bed-b991-4687-b23c-01762a668803","label":"COMPOSES","from":"7b7e43a8-2ec5-4922-89b0-861c670aa4e3","to":"420e30c0-4f43-4d50-81d1-5fba452df252"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"cbd9e7bb-21ee-4fe5-926b-ed8f78c8198f","label":"Component","properties":{"name":"Resolver","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-73c98fd1-ae22-407b-8fd5-39850691ea91","label":"COMPOSES","from":"7b7e43a8-2ec5-4922-89b0-861c670aa4e3","to":"cbd9e7bb-21ee-4fe5-926b-ed8f78c8198f"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"214d01a5-c6b8-4a26-aa6a-c90451f6dd12","label":"Component","properties":{"name":"Processor","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-13d83a90-5c35-42ee-91ff-75194f7e1a68","label":"COMPOSES","from":"7b7e43a8-2ec5-4922-89b0-861c670aa4e3","to":"214d01a5-c6b8-4a26-aa6a-c90451f6dd12"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"11c8cee2-a89f-4054-929b-93cf2401c8bb","label":"Component","properties":{"name":"Sessions","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-63a88e61-0087-4d21-b895-02f60c9af15c","label":"COMPOSES","from":"7b7e43a8-2ec5-4922-89b0-861c670aa4e3","to":"11c8cee2-a89f-4054-929b-93cf2401c8bb"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"27d2d68c-387a-4e04-8d81-53c6c333e65b","label":"Component","properties":{"name":"Reviews","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-8025d219-2b28-4186-8988-f2a41f7c667b","label":"COMPOSES","from":"7b7e43a8-2ec5-4922-89b0-861c670aa4e3","to":"27d2d68c-387a-4e04-8d81-53c6c333e65b"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"5c7d22b1-2c2f-4320-91b7-3f5de90877c9","label":"Component","properties":{"name":"Errors","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-1adab0e3-9cdd-480b-89ee-219d80eabeab","label":"COMPOSES","from":"7b7e43a8-2ec5-4922-89b0-861c670aa4e3","to":"5c7d22b1-2c2f-4320-91b7-3f5de90877c9"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"745bf29b-1f05-49ca-abd2-b0073863e62a","label":"Component","properties":{"name":"Init Command","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-c4b7658d-10fa-4a03-a21e-c81fcb1e3d71","label":"COMPOSES","from":"f37d7520-b8a2-4afd-8965-e621abdcc96c","to":"745bf29b-1f05-49ca-abd2-b0073863e62a"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"68447c43-4e4f-4d9b-92e5-f300bf1e22de","label":"Component","properties":{"name":"Sync Command","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-43b91303-87fd-484f-8cdf-2758a68622aa","label":"COMPOSES","from":"f37d7520-b8a2-4afd-8965-e621abdcc96c","to":"68447c43-4e4f-4d9b-92e5-f300bf1e22de"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"f06fafaa-dd20-4f76-9171-5e09051ef254","label":"Component","properties":{"name":"Viz Command","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-6b88feeb-b548-4ff4-9750-b1b06c91fb0a","label":"COMPOSES","from":"f37d7520-b8a2-4afd-8965-e621abdcc96c","to":"f06fafaa-dd20-4f76-9171-5e09051ef254"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"43eeb3a5-ea72-469f-bbec-05fce5a4314d","label":"Component","properties":{"name":"Config Command","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-57c3d5e0-4792-4f91-9a08-dc2c0c7e050d","label":"COMPOSES","from":"f37d7520-b8a2-4afd-8965-e621abdcc96c","to":"43eeb3a5-ea72-469f-bbec-05fce5a4314d"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"6865f4ef-e6c2-49a6-9ffe-f3fe49d8be00","label":"Component","properties":{"name":"Server Core","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-722bddf4-8432-4be4-9ed9-39c5aca647a3","label":"COMPOSES","from":"d36d11eb-1ed5-4a87-b116-d5d547430a5c","to":"6865f4ef-e6c2-49a6-9ffe-f3fe49d8be00"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"7d754b50-7efa-450a-9cf1-e1abf80accfc","label":"Component","properties":{"name":"Context Tool","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-3b8a7379-1828-411e-880f-3a44ee9e4510","label":"COMPOSES","from":"d36d11eb-1ed5-4a87-b116-d5d547430a5c","to":"7d754b50-7efa-450a-9cf1-e1abf80accfc"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"3028e281-72b6-46dd-8a0f-3b01f70a1eec","label":"Component","properties":{"name":"Get Decisions Tool","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-636da18b-76a1-47af-93e9-5f2bf8853a9e","label":"COMPOSES","from":"d36d11eb-1ed5-4a87-b116-d5d547430a5c","to":"3028e281-72b6-46dd-8a0f-3b01f70a1eec"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"5c12d8bd-3eff-4318-bb30-f2785759cf04","label":"Component","properties":{"name":"Get Gaps Tool","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-f94bb183-3674-4350-b122-9e0df8971442","label":"COMPOSES","from":"d36d11eb-1ed5-4a87-b116-d5d547430a5c","to":"5c12d8bd-3eff-4318-bb30-f2785759cf04"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"6a3cf312-7c51-4574-abbd-f37c45f4f5ce","label":"Component","properties":{"name":"Get Reviews Tool","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-32a190d3-e711-458c-9824-ea22f954a8ee","label":"COMPOSES","from":"d36d11eb-1ed5-4a87-b116-d5d547430a5c","to":"6a3cf312-7c51-4574-abbd-f37c45f4f5ce"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"7befb354-0f96-4ede-a9c3-8f682ae00272","label":"Component","properties":{"name":"Get Errors Tool","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-da3eb354-be1a-41af-8616-bcdaeda64df8","label":"COMPOSES","from":"d36d11eb-1ed5-4a87-b116-d5d547430a5c","to":"7befb354-0f96-4ede-a9c3-8f682ae00272"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"ed7eb8ee-22b8-4596-91c0-036cfe5a4849","label":"Component","properties":{"name":"Bake Engine","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-7a4dae72-9a56-4727-91fa-70b75613cfbf","label":"COMPOSES","from":"d2754c3b-a481-4dd6-adc5-6fec5cf8d342","to":"ed7eb8ee-22b8-4596-91c0-036cfe5a4849"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"376919c1-c21c-4109-a574-69cbfea87af4","label":"Component","properties":{"name":"HTML Template","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-5d01be14-16e9-4d6a-842a-3c0d06f18fcf","label":"COMPOSES","from":"d2754c3b-a481-4dd6-adc5-6fec5cf8d342","to":"376919c1-c21c-4109-a574-69cbfea87af4"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"6dd89deb-a051-474f-9059-b17dfb7c28c8","label":"Component","properties":{"name":"Timeline Scrubber","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-e1086bf4-f1c2-4521-b67d-33e722be358b","label":"COMPOSES","from":"d2754c3b-a481-4dd6-adc5-6fec5cf8d342","to":"6dd89deb-a051-474f-9059-b17dfb7c28c8"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"8e712880-d8e9-4d16-9a3d-688555a45669","label":"Component","properties":{"name":"Focus+Context","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-2d0e97e7-28e7-4819-9be4-28d40d7f6ceb","label":"COMPOSES","from":"d2754c3b-a481-4dd6-adc5-6fec5cf8d342","to":"8e712880-d8e9-4d16-9a3d-688555a45669"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"3fd36db9-736b-435c-adb4-056c087eeac2","label":"Component","properties":{"name":"Tag Filtering","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-24c8fe34-b2f7-4d67-835d-686141ea09a5","label":"COMPOSES","from":"d2754c3b-a481-4dd6-adc5-6fec5cf8d342","to":"3fd36db9-736b-435c-adb4-056c087eeac2"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"488e16cf-9a14-4f21-98dc-1581412ef4d3","label":"Component","properties":{"name":"Side Panel","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-e3bbe9fd-236f-4457-a5c6-aa7cb82d3bb3","label":"COMPOSES","from":"d2754c3b-a481-4dd6-adc5-6fec5cf8d342","to":"488e16cf-9a14-4f21-98dc-1581412ef4d3"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"e707d7d2-9c79-4cf4-b492-308ca3481902","label":"Component","properties":{"name":"URL Hash State","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-a6e88438-16ef-48f5-a52e-e2ecdd192642","label":"COMPOSES","from":"d2754c3b-a481-4dd6-adc5-6fec5cf8d342","to":"e707d7d2-9c79-4cf4-b492-308ca3481902"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"e259ebf7-d9b9-4f50-86ea-fd9ceaec6783","label":"Component","properties":{"name":"Claude Code Prompts","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-cd96f62a-1883-44cb-bade-1f24517916a7","label":"COMPOSES","from":"36ce435c-6835-45bb-819d-5cc6e9989b84","to":"e259ebf7-d9b9-4f50-86ea-fd9ceaec6783"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"fc739191-2a58-4788-af0e-625b002312d8","label":"Component","properties":{"name":"Cursor Prompts","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-e822c659-c2ea-48c7-b5f1-b6e6e2505715","label":"COMPOSES","from":"36ce435c-6835-45bb-819d-5cc6e9989b84","to":"fc739191-2a58-4788-af0e-625b002312d8"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"3eb558b4-25c7-48c1-b4d8-a0caa7e5fb10","label":"Component","properties":{"name":"Copilot Prompts","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-6298a717-23ae-4892-a3b7-b75ba1790246","label":"COMPOSES","from":"36ce435c-6835-45bb-819d-5cc6e9989b84","to":"3eb558b4-25c7-48c1-b4d8-a0caa7e5fb10"}
+{"type":"node_added","timestamp":"2026-03-22T00:00:00Z","id":"e2a8a837-dd73-454d-adf7-da18e82453b6","label":"Component","properties":{"name":"Generic Prompts","status":"active"}}
+{"type":"edge_added","timestamp":"2026-03-22T00:00:00Z","id":"edge-d8dded2d-96ed-42b0-8601-53b362ab7faa","label":"COMPOSES","from":"36ce435c-6835-45bb-819d-5cc6e9989b84","to":"e2a8a837-dd73-454d-adf7-da18e82453b6"}

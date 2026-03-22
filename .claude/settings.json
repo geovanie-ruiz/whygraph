@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Before writing, modifying, or deleting code, read and follow .whygraph/INSTRUCTIONS.md'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx whygraph sync 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

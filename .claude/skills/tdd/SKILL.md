@@ -75,6 +75,7 @@ For each remaining behavior:
 ```
 RED:   Write next test → fails
 GREEN: Minimal code to pass → passes
+CAPTURE: What did I just choose? What else could I have done?
 ```
 
 Rules:
@@ -83,6 +84,7 @@ Rules:
 - Only enough code to pass current test
 - Don't anticipate future tests
 - Keep tests focused on observable behavior
+- After each GREEN, ask: "did I just make a decision?" If yes, capture it immediately
 
 ### 4. Refactor
 
@@ -96,6 +98,12 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 
 **Never refactor while RED.** Get to GREEN first.
 
+### 5. Decision Audit
+
+After all cycles complete, run the post-work audit. For every file, function, type,
+library call, error path, test, and config value — did you make a choice? See
+`docs/beads/DECISION_STANDARD.md` for the full checklist and recognition heuristic.
+
 ## Checklist Per Cycle
 
 ```text
@@ -104,4 +112,5 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 [ ] Test would survive internal refactor
 [ ] Code is minimal for this test
 [ ] No speculative features added
+[ ] Decisions from this cycle captured (if any)
 ```

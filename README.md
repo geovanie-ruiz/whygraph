@@ -2,7 +2,9 @@
 
 **The graph of why. So your agent knows before it touches anything.**
 
-Whygraph is a repo-native decision graph that captures the architectural rationale behind your codebase — and makes it queryable by AI agents before they write a single line.
+Whygraph is a developer tool that captures the architectural rationale behind your codebase — the decisions, tradeoffs, and rejected alternatives — and makes it queryable by AI agents before they write a single line.
+
+It integrates with your development environment to teach agents how to recognize and record decisions as they work, so the _why_ behind your architecture is never lost.
 
 ---
 
@@ -12,7 +14,7 @@ You're vibe-coding. The agent is fast. Features ship in minutes. Then three sess
 
 This isn't a hallucination problem. It's a memory problem. The agent isn't wrong. It just doesn't know the why.
 
-Your CLAUDE.md has conventions. Beads has tasks. Your codebase has structure. But none of them carry rationale. None of them answer the question an agent actually needs answered before acting:
+Your CLAUDE.md has conventions. Your task tracker has tickets. Your codebase has structure. But none of them carry rationale. None of them answer the question an agent actually needs answered before acting:
 
 > _Why is this shaped the way it is, and what did we try before this?_
 
@@ -22,218 +24,155 @@ That's what Whygraph is for.
 
 ## What It Is
 
-Whygraph is a **decision graph** — a lightweight, append-only graph stored as `.whygraph/graph.jsonl` in your repo. It models your application as a hierarchy of nodes (app → features → components) connected by edges. Decisions attach to the nodes they affect, recording context, rationale, trade-offs, and rejected alternatives.
+Whygraph is a **decision graph** — an append-only event log stored as `.whygraph/events.jsonl` in your repo, projected at runtime into a queryable graph. It models your application as a hierarchy of nodes (app → features → components) with decisions attached to the nodes they affect.
 
-```
-App
+```text
+App: MyProject
 ├── Feature: Auth
 │   ├── Component: Session Management
-│   │   └── [AUTH-001] JWT over sessions
+│   │   └── ◆ JWT over sessions (active)
 │   └── Component: Token Refresh
-│       └── [AUTH-002] Silent refresh via interceptor
+│       └── ◆ Silent refresh via interceptor (active)
 └── Feature: API Layer
     ├── Component: Rate Limiting
-    │   └── [API-001] Redis-backed sliding window
-    └── [API-002] REST over tRPC
+    │   └── ◆ Redis-backed sliding window (active)
+    └── ◆ REST over tRPC (active)
 ```
 
-Every decision has a date. The graph is the temporal history of your architecture — not just what it is now, but how it got here and why.
+Every decision records context (why it was needed), the choice made, tradeoffs accepted, and alternatives rejected. Decisions are never deleted — a superseded decision stays in the graph, explaining how the architecture evolved.
+
+---
+
+## Platform Integration
+
+Whygraph is **platform-agnostic**. It's distributed as an npm package and works with any AI development environment. When installed in a supported environment, it integrates deeply with that platform's agent infrastructure.
+
+**Claude Code** gets first-class integration: session hooks for automatic sync, skills for codebase scanning and decision interviews, and a durable instruction pointer via SessionStart hooks. Whygraph functions as a Claude Code plugin in this environment.
+
+**Cursor, Copilot, and other environments** get baseline integration: pointer files in the platform's instruction location (`.cursor/rules/`, `.github/copilot-instructions.md`), git hooks for sync on commit, and prompt files for scan/interview workflows.
+
+**Unsupported environments** get the agnostic baseline: `.whygraph/INSTRUCTIONS.md` contains the full decision framework, and `whygraph init` tells the developer how to configure their agent to read it before modifying code.
+
+The architecture supports equal integration depth on any platform. Claude Code is deepest because it's where development started — other platforms will get deeper integration over time.
+
+| Platform    | Instruction Delivery              | Sync Trigger        | Durability                         |
+| ----------- | --------------------------------- | ------------------- | ---------------------------------- |
+| Claude Code | SessionStart hook                 | Hook on session end | Durable — independent of CLAUDE.md |
+| Cursor      | `.cursor/rules/whygraph.md`       | Git hook on commit  | Developer must preserve            |
+| Copilot     | `.github/copilot-instructions.md` | Git hook on commit  | Developer must preserve            |
+| Other       | Manual configuration              | Manual CLI          | Developer manages                  |
 
 ---
 
 ## How It Works
 
-### The Graph Schema
+### Architecture: Event Sourcing + Graph Projection
 
-Four node types. Three edge types. That's it.
+The event log (`.whygraph/events.jsonl`) is the append-only source of truth. Every graph mutation — adding a node, creating an edge, patching a property — is a timestamped event. The runtime graph is a `graphology.MultiDirectedGraph` rebuilt by replaying the event log on every read.
 
-**Nodes**
+This means temporal replay is free: `buildGraphAt(events, cutoff)` replays a subset of events to show the graph at any point in history.
 
-| Type        | Description                                              |
-| ----------- | -------------------------------------------------------- |
-| `App`       | Root node. One per project.                              |
-| `Feature`   | A user-facing capability (e.g. "Auth", "Billing")        |
-| `Component` | An implementation unit within a feature                  |
-| `Decision`  | A recorded architectural fork with context and rationale |
+### Decision Capture
 
-**Edges**
+Agents capture decisions as they work. `.whygraph/INSTRUCTIONS.md` teaches agents to recognize decisions — not just explicit forks ("should I use X or Y?") but also:
 
-| Type         | Description                                                     |
-| ------------ | --------------------------------------------------------------- |
-| `COMPOSES`   | `App → Feature`, `Feature → Component`, `Component → Component` |
-| `AFFECTS`    | `Decision → Feature` or `Decision → Component`                  |
-| `SUPERSEDES` | `Decision → Decision` (temporal chain)                          |
+- Conventions followed that a future agent might not know
+- Configuration choices that exclude alternatives
+- Data modeling decisions with downstream consequences
+- Deliberate omissions (choosing NOT to do something)
+- Inventions not in the requirements
 
-**Decision Properties**
-
-```typescript
-type Decision = {
-  id: string; // e.g. "AUTH-001"
-  title: string;
-  date: string; // ISO 8601
-  context: string; // Why this decision was needed
-  decision: string; // What was chosen and how it was implemented
-  tradeoffs: string; // What was gained vs. given up
-  alternatives: string; // Other approaches considered and why they were rejected
-  status: "active" | "superseded" | "deprecated";
-  affects: string[]; // Node IDs this decision touches
-  supersedes?: string; // Decision ID this replaces
-};
-```
-
-### The Storage Format
-
-`.whygraph/graph.jsonl` — one JSON object per line, one line per node or edge.
-
-```jsonl
-{"type":"node","label":"App","id":"app","properties":{"name":"MyApp"}}
-{"type":"node","label":"Feature","id":"feat-auth","properties":{"name":"Auth"}}
-{"type":"node","label":"Component","id":"comp-session","properties":{"name":"Session Management"}}
-{"type":"edge","label":"COMPOSES","from":"app","to":"feat-auth"}
-{"type":"edge","label":"COMPOSES","from":"feat-auth","to":"comp-session"}
-{"type":"node","label":"Decision","id":"AUTH-001","properties":{"title":"JWT over sessions","date":"2025-03-01","context":"API is stateless by design; session state would require sticky routing or shared Redis","decision":"JWTs with 15m expiry and silent refresh. Tokens signed with RS256.","tradeoffs":"Gained: stateless scaling, simple horizontal deployment. Lost: instant revocation requires a denylist.","alternatives":"Server-side sessions (rejected: shared state), opaque tokens (rejected: DB lookup per request)","status":"active","affects":["comp-session","comp-token-refresh"]}}
-{"type":"edge","label":"AFFECTS","from":"AUTH-001","to":"comp-session"}
-```
-
-This format is git-friendly (line-level diffs), agent-readable (parseable without loading everything), and human-inspectable (`cat .whygraph/graph.jsonl | jq`).
-
-Decisions are **never deleted**. A superseded decision stays in the graph — it explains why the current structure replaced what came before. The history is the point.
+The instructions are directive: "Write a staging entry for every architectural choice." Agents write structured entries to `.whygraph/staging/` which are processed into events by `whygraph sync`.
 
 ### The MCP Server
 
-Whygraph exposes a lightweight MCP server so Claude Code and any MCP-compatible agent can query the graph before acting.
+Whygraph exposes 5 read-only MCP tools:
 
-```json
-// .claude/mcp.json
-{
-  "mcpServers": {
-    "whygraph": {
-      "command": "npx",
-      "args": ["whygraph-mcp"]
-    }
-  }
-}
-```
+| Tool                              | Description                                                   |
+| --------------------------------- | ------------------------------------------------------------- |
+| `whygraph_context(file, symbol?)` | Get decisions and constraints for code you're about to modify |
+| `whygraph_get_decisions(filters)` | Query decisions by status, tags, date range                   |
+| `whygraph_get_gaps(limit?)`       | Find areas with no recorded decisions                         |
+| `whygraph_get_reviews()`          | Get pending supersede candidates                              |
+| `whygraph_get_errors()`           | Get failed staging entries                                    |
 
-**Available tools**
+All writes go through staging files — the MCP server is read-only.
 
-| Tool                     | Description                                                  |
-| ------------------------ | ------------------------------------------------------------ |
-| `whygraph_get_feature`   | Get a feature node and all decisions that affect it          |
-| `whygraph_get_decisions` | Query decisions by feature, component, date range, or status |
-| `whygraph_get_history`   | Get the full decision chain for a node, ordered by date      |
-| `whygraph_get_subgraph`  | Get a subgraph rooted at a given node, bounded by depth      |
-| `whygraph_add_decision`  | Write a new decision record to the graph                     |
-| `whygraph_supersede`     | Mark a decision superseded and link the replacement          |
+### The Visualization
 
-### Add This to Your CLAUDE.md
+`whygraph viz` generates a self-contained HTML file with an interactive force-directed D3 graph. Timeline scrubber replays the architecture's evolution. Tag filtering slices by concern (arch, data, security, performance, integration, infra, ux). Focus+context navigation lets you drill into any subtree. Side panels show full decision details.
 
-```markdown
-## Architectural Memory
-
-This project uses Whygraph for architectural decision tracking. Before modifying
-any feature or component, query the Whygraph MCP server:
-
-whygraph_get_feature("<feature-name>")
-
-This returns the structural context and rationale for that area of the codebase.
-Do not contradict an active decision without first recording a new one that
-supersedes it. If you are unsure whether your approach conflicts with an existing
-decision, call whygraph_get_decisions before proceeding.
-```
-
----
-
-## The Timeline
-
-Every decision has a date. `whygraph timeline` renders a point-in-time snapshot of the graph — what did the architecture look like before a given decision was made?
-
-```bash
-whygraph timeline --at 2025-02-15
-whygraph timeline --before AUTH-003
-```
-
-This is how you answer "why did this become so complicated?" — replay the sequence of decisions that produced the current structure, one fork at a time.
+The HTML works offline, opens via `file://`, and is committable to the repo.
 
 ---
 
 ## Getting Started
 
 ```bash
-npm install -g whygraph
-cd your-project
-whygraph init
+npm install --save-dev whygraph
+npx whygraph init
 ```
 
-`whygraph init` creates `.whygraph/graph.jsonl` with your app root node and walks you through defining your top-level features. From there, decisions can be added via CLI or directly by your agent through the MCP server.
+`whygraph init` walks you through environment selection and creates the `.whygraph/` directory with all required files. It configures platform-specific hooks and instruction delivery based on your environment.
+
+After init, run `/whygraph-scan` in your agent to map your codebase's feature/component structure. Then run `/whygraph-interview` to capture historical decisions from your mental model.
+
+From there, agents capture decisions automatically as they work.
+
+---
+
+## CLI
 
 ```bash
-# Add a decision
-whygraph add --feature auth --title "JWT over sessions" --id AUTH-001
-
-# View the current graph
-whygraph graph
-
-# Query decisions for a feature
-whygraph decisions --feature auth
-
-# Show the full timeline
-whygraph timeline
+whygraph init              # Set up whygraph for your project
+whygraph sync [--flush]    # Process staging files into events
+whygraph viz [--no-open]   # Generate the visualization
+whygraph config --flag val # Modify preferences
+whygraph mcp               # Start the MCP stdio server
 ```
+
+---
+
+## Graph Schema
+
+**Node Types**: `App`, `Feature`, `Component`, `Decision`
+
+**Edge Types**: `COMPOSES` (structural hierarchy), `AFFECTS` (decision → node), `SUPERSEDES` (decision → decision), `DEPRECATES` (node → node)
+
+**Decision Properties**: title, date, context, decision, tradeoffs, alternatives, status, affects, tags
+
+**Tags** (fixed taxonomy): `arch`, `data`, `security`, `performance`, `integration`, `infra`, `ux`
 
 ---
 
 ## Design Principles
 
-**The why is not in the code.** You can read a codebase and understand what it does. You cannot read it and understand what was tried before, what was rejected, and what trade-offs were accepted. That knowledge lives in people's heads, decays across sessions, and disappears entirely when an agent starts fresh.
+**The why is not in the code.** You can read a codebase and understand what it does. You cannot read it and understand what was tried before, what was rejected, and what trade-offs were accepted. That knowledge decays across sessions and disappears when an agent starts fresh.
 
-**Ground truth over inference.** Whygraph records what was actually decided. An agent reading the graph gets the rationale, not a reconstruction of it. This is the distinction between memory and hallucination.
+**Decisions, not documentation.** Whygraph captures structured decision records — context, choice, tradeoffs, alternatives — not prose. This structure is what makes decisions queryable and visualizable.
 
-**Append-only.** The history is the product. Decisions that get superseded stay in the graph — they explain the path, not just the destination.
+**Append-only.** The history is the product. Superseded decisions stay in the graph. They explain the path, not just the destination.
 
-**Repo-native.** The graph lives in your repo, versioned with your code. When you branch, the graph branches. When you merge, it merges. No external service, no account required.
+**Repo-native.** The graph lives in your repo, versioned with your code. No external service, no account required.
 
-**Minimal friction.** A decision that takes five minutes to write won't get written. Context, decision, trade-offs, alternatives. That's the whole schema.
+**Agent-first.** The MCP interface and INSTRUCTIONS.md are the primary interfaces. The CLI and visualization exist so humans can inspect what agents will read.
 
-**Agent-first.** The MCP interface is the primary interface. The CLI and visualization exist so humans can inspect what the agent will read.
-
----
-
-## How Whygraph Fits
-
-| Tool               | What it stores                           | Whygraph's relationship                                       |
-| ------------------ | ---------------------------------------- | ------------------------------------------------------------- |
-| **Beads**          | Task execution state (what to do next)   | Complementary — Beads tracks tasks, Whygraph tracks rationale |
-| **CLAUDE.md**      | Conventions and behavioral rules         | Complementary — CLAUDE.md is the how, Whygraph is the why     |
-| **Code-Graph-RAG** | Code structure (what exists)             | Complementary — structural map vs. decision history           |
-| **Structurizr**    | Architecture diagrams + ADR viewer       | Human-facing; not agent-queryable                             |
-| **Warp Drive**     | Shared workflows and operational context | Different layer — procedures, not rationale                   |
+**Platform-agnostic.** Whygraph works with any AI development environment. Deep integration with specific platforms is additive, not required.
 
 ---
 
 ## Status
 
-Early development. The JSONL schema and MCP tool interface are stable. CLI and visualization are in progress.
-
-Contributions welcome — especially:
-
-- MCP server robustness and query optimization
-- CI integration (flag PRs that touch features with active decisions)
-- Visualization of the temporal graph
-- Import from existing ADR markdown formats (adr-tools, MADR, log4brains)
+Early development. Core architecture (event log, projection, types) is implemented. Staging pipeline, CLI, MCP server, and visualization are in progress.
 
 ---
 
-## Why Whygraph
+## Acknowledgments
 
-Because the only question that matters before an agent touches your codebase is the one no other tool answers.
+Special thanks to:
 
----
+- **[Matt Pocock](https://www.youtube.com/@mattpocockuk)** — the development skills used in this project (TDD, simplify, PRD writing, and others) are based on his [5 Skills for Claude Code](https://www.youtube.com/watch?v=EJyuu6zlQCg) workflow
 
 ## License
 
 MIT
-
-GIVING THANKS: MERGE THIS INTO README IN A PROPER FORMAT
-MATT POCOCK YT: https://www.youtube.com/@mattpocockuk
-REFERENCE VIDEO FOR 5 SKILLS: https://www.youtube.com/watch?v=EJyuu6zlQCg

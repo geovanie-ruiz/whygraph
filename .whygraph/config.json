@@ -1,0 +1,7 @@
+{
+  "appName": "Whygraph",
+  "environment": "claude-code",
+  "syncTrigger": "hook",
+  "contextInjection": "always",
+  "autonomy": "supervised"
+}
