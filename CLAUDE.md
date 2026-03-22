@@ -19,3 +19,5 @@ This project uses whygraph for architectural decision tracking. Before writing, 
 - Validate before every append — never skip validation
 - TDD: red-green-refactor with vitest
 - graphology is the graph — do not build parallel data structures
+- All CLI commands must accept `--json` for programmatic output
+- Error handling: core functions throw typed errors, CLI catches and formats for humans, MCP catches and formats per protocol
