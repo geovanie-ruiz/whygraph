@@ -126,9 +126,50 @@ never received them. Fixing delivery fixes compliance.
 - [x] `.whygraph/` repo-native files committed to git
 - [x] SubagentStart hooks tested and documented as non-functional
 
+## Verification Results (2026-03-22)
+
+### Test 1: Sub-agent in same session as CLAUDE.md modification
+
+Spawned two sub-agents after modifying CLAUDE.md to include the whygraph trigger.
+Both reported CLAUDE.md had NO mention of whygraph. Investigation revealed:
+
+**Sub-agents receive CLAUDE.md as it existed at SESSION START, not the current
+file on disk.** Changes to CLAUDE.md during a session do not propagate to
+sub-agents spawned later in that session. This is Claude Code platform behavior,
+not a whygraph bug.
+
+**Implication for `whygraph init`:** After init modifies CLAUDE.md, the developer
+must restart their session for sub-agents to receive the trigger. This should be
+documented in init's output message and in the worktree advisory guidance.
+
+**Implication for the plan:** The CLAUDE.md trigger mechanism is correct — it just
+requires a session restart after initial setup. This is a one-time cost (init runs
+once per project). Subsequent sessions will have the trigger from the start.
+
+### Test 2: `whygraph` binary availability
+
+First test failed because `whygraph` was not in PATH. The package was installed
+as a dev dependency but not linked. Fixed via `npm link`. In a real user install
+(`npm install --save-dev whygraph`), the binary lives in `node_modules/.bin/`
+and is accessible via `npx whygraph prime` but not `whygraph prime` directly
+unless the user adds `node_modules/.bin` to PATH or uses npm scripts.
+
+**Decision needed:** Should the CLAUDE.md trigger say `whygraph prime` or
+`npx whygraph prime`? `npx` is more portable but slower. `whygraph` is cleaner
+but requires PATH setup. For now, using `whygraph prime` with the expectation
+that npm link or global install makes it available.
+
+### Test 3: Pending — new session verification
+
+Need to restart the session and spawn a sub-agent to confirm that CLAUDE.md
+trigger works when it exists at session start. This will validate the complete
+chain: session start → CLAUDE.md loaded → sub-agent inherits trigger → sub-agent
+runs `whygraph prime` → sub-agent captures decisions.
+
 ## What Remains
 
+- [ ] Restart session and verify sub-agent receives CLAUDE.md trigger (Test 3)
 - [ ] Refactor prime to not include UUID map once MCP server is functional (bead 13)
-- [ ] Verify sub-agent capture: spawn a sub-agent, confirm it runs prime, confirm it creates staging entries
 - [ ] Write worktree advisory guidance in documentation
-- [ ] Update plan document to final state after verification
+- [ ] Document in init output: "restart your session for sub-agents to receive the trigger"
+- [ ] Decide on `whygraph prime` vs `npx whygraph prime` in CLAUDE.md trigger
