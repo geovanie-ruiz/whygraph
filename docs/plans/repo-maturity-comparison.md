@@ -279,17 +279,60 @@ when `whygraph init` supports different environments and preferences.
 - **Documentation tiers**: Setup → Features → Architecture → Developer
 - **Token economy mindset**: `prime` outputs ~1k tokens, not 10k
 
-### From Context7 (MCP server pattern)
-- **Single-purpose MCP tools**: Each tool does one thing (resolve library → fetch docs)
-- **Fallback modes**: CLI mode when MCP isn't available
-- **Cross-platform via protocol**: MCP works in Claude Code, Cursor, Zed, Continue
+### From Context7 (MCP server + multi-platform)
 
-### From Log4brains (documentation tool pattern)
-- **Templates as first-class**: Users customize the decision template
-- **Static site generation**: Decisions are browsable without the CLI
-- **Immutable records**: Decisions are never edited, only superseded
+**Repo traits**: pnpm monorepo, TypeScript-first (89.6%), Changeset versioning,
+16+ languages in docs, `.claude-plugin/` directory for marketplace metadata.
+
+- **Dual integration modes**: MCP tools (`resolve-library-id`, `query-docs`) AND
+  CLI+Skills mode (`ctx7 library`, `ctx7 docs`). Same functionality, two delivery
+  paths. Whygraph plans the same (MCP for queries, CLI for operations) but hasn't
+  built either mode fully yet.
+- **Setup command with platform flags**: `npx ctx7 setup --cursor --claude --opencode`
+  detects and configures per platform. Whygraph's `init` should do the same.
+- **Monorepo with packages/plugins/skills separation**: Clear boundaries between
+  core MCP server, platform plugins, and skill definitions. Whygraph currently
+  mixes everything in `src/`.
+- **Cross-platform from day one**: Supports Claude Code, Cursor, OpenCode out of
+  the gate. Whygraph designs for this but hasn't implemented beyond Claude Code.
+
+**What whygraph should adopt**:
+- Platform-specific setup flags on `init` (`--claude`, `--cursor`, `--copilot`)
+- `.claude-plugin/` directory structure for eventual marketplace listing
+- Dual mode pattern: MCP when available, CLI always
+
+### From Log4brains (monorepo documentation tool)
+
+**Repo traits**: Lerna monorepo with 6 packages (cli, core, cli-common, global-cli,
+init, web), Jest for testing, dedicated e2e-tests directory, Docker support,
+Apache 2.0 license.
+
+- **Package separation by concern**: `core` (business logic), `cli` (interface),
+  `init` (setup), `web` (static site). Each is independently publishable. Whygraph
+  has this conceptually (core, staging, cli, mcp, viz) but as directories, not
+  packages. The monorepo structure is overkill for whygraph's size but the
+  *separation principle* is right.
+- **`init` as its own package**: Initialization is complex enough to warrant
+  isolation — detecting environment, generating config, writing templates. Whygraph's
+  init will be similarly complex (detect platform, register hooks, write instruction
+  files, seed event log). Keeping it isolated from core is smart.
+- **e2e-tests as a separate directory**: Not mixed with unit tests. Clear signal
+  of what's fast (unit) vs slow (e2e). Whygraph should do the same when integration
+  tests are added.
+- **Static site generation from decisions**: `log4brains build` produces a browsable
+  website. Whygraph's `viz` command serves the same purpose but as a self-contained
+  HTML file rather than a full site. Different approach, same user need.
+- **README includes CI/CD examples**: Shows GitHub Actions and GitLab CI configs
+  for deploying the docs site. Good for adoption — users can copy-paste into their
+  own repos.
+
+**What whygraph should adopt**:
+- Separate e2e-tests directory when integration tests are added
+- CI/CD examples in README showing how to integrate whygraph into a project's pipeline
+- Init logic isolated from core business logic
 
 ### From the ADR ecosystem
+
 - **Simplicity wins**: adr-tools is 5 bash scripts and has thousands of users
 - **Convention over configuration**: Numbered files in `docs/decisions/`
 - **Status is the only mutable field**: Everything else is append-only
