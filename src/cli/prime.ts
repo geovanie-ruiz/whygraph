@@ -74,29 +74,70 @@ If any whygraph MCP tool returns a staleness error, stop and inform the user.
 
 ## Capturing Decisions
 
-Write staging entries to \`.whygraph/staging/\` for every architectural choice you
-make. A decision is any point where you:
+Write staging entries to \`.whygraph/staging/\` for decisions about the production
+code you write. Not every choice is worth documenting. The test:
 
-1. **Chose between viable approaches** — even if one was clearly better. The "clearly
-   better" reasoning is what a future agent needs.
-2. **Followed a convention or pattern** a future agent might not know to follow. Why
-   this pattern? What would go wrong with a different one?
-3. **Configured something with specific values** — compiler flags, library options,
-   directory structures. Each configuration choice excludes alternatives.
-4. **Modeled data in a specific way** — type shapes, required vs optional fields,
-   unions vs interfaces. Data modeling choices have deep downstream consequences.
-5. **Chose NOT to do something** — didn't add a feature, didn't use a library, didn't
-   handle an edge case. Deliberate omissions are decisions.
-6. **Invented something not in the requirements** — scaffolding, helpers, workarounds.
-   If it's not in the spec, document why it exists.
+**Would a competent junior engineer, reading the surrounding code and types, figure
+out WHY this choice was made?** If yes, skip it. If no, write it down.
 
-The most important decisions to capture are the ones that feel obvious. If you chose
-an approach without hesitation, a future agent has no way to know that alternatives
-existed and were rejected. That invisible rationale is the exact cognitive debt this
-tool exists to prevent.
+Decisions apply to **production code only** — not tests, not absent code you never
+considered writing.
 
-Write each staging entry as soon as you make the choice, not at the end of a session.
-The reasoning degrades within minutes — capture it while it's fresh.
+### Recognizing Decisions
+
+A decision is a point where you made a choice that passes the quality test above:
+
+1. **You chose between viable approaches** — even if one was clearly better. The
+   "clearly better" reasoning is what a junior needs.
+2. **You followed a convention or pattern** a future engineer might not know to follow.
+   Why this pattern? What breaks with a different one?
+3. **You configured something with specific values** — compiler flags, library options,
+   directory structures, data shapes. Each choice excludes alternatives.
+4. **You modeled data in a specific way** — type shapes, required vs optional fields,
+   unions vs interfaces. Data modeling has deep downstream consequences.
+5. **You actively chose NOT to do something** — you considered adding a feature,
+   library, or edge case handler and decided against it. The key word is *actively*:
+   you had the thought "should I do X?" and chose no. If you never considered X,
+   not doing X is not your decision to document.
+6. **You invented something not in the spec** — scaffolding, helpers, workarounds.
+   If it's not in the requirements, document why it exists.
+7. **You ratified a spec-prescribed choice** — the spec said "use X" and you
+   implemented it. What alternatives does the library offer? Why is X correct here?
+   A junior following the spec wouldn't know what else was possible.
+8. **You relied on implicit library behavior** — cascade deletes, shallow vs deep
+   merge, auto-generated IDs, side effects beyond the method name. If the library
+   changed this behavior, your code would silently break.
+9. **You kept something from existing code without changing it** — an import, a
+   pattern, a data structure. You ratified the original author's choice. Would you
+   make the same choice fresh? A junior might "improve" it and break things.
+
+### What Does NOT Count
+
+- Anything a junior could figure out from reading surrounding code, types, or tests
+- Typo fixes, formatting, variable naming (unless the name encodes a design choice)
+- Mechanical work with no alternatives
+- Test code — structure, helpers, coverage boundaries, assertion patterns
+- Absent code you never considered writing
+
+### Capture Timing
+
+Write each decision as close to the moment of making it as possible. After each
+logical unit of work, ask: "Did I just make a decision about the code I wrote?"
+
+### Post-Work Audit
+
+After completing your work, review the production code **you wrote** — every line
+you added or changed. The audit is scoped to your work, not to what's absent.
+
+- For every function you wrote: what API shape did you choose and why?
+- For every library call you made: what alternatives exist? What implicit behavior
+  are you depending on?
+- For every type you defined: what modeling tradeoffs are embedded?
+- For every error path you implemented: what did you handle and why that way?
+- For every config value you set: what would a different value mean?
+
+Do NOT audit for absent code — features you didn't add, checks you didn't write,
+patterns you never considered.
 
 ### Staging Entry Format
 
