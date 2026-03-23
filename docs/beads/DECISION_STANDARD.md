@@ -30,10 +30,9 @@ Calibration examples:
   library behavior a junior wouldn't know about.
 - **NOT worth documenting:** Initializing an empty array before a loop when init and
   assignment could be one line — stylistic, visible from context.
-- **Worth documenting:** Omitting local validation because an upstream module already
-  guarantees the invariant — a junior would add a "safety" check that masks upstream
-  bugs. The absence of code is the decision, and nothing in the file explains why it's
-  missing.
+- **NOT a decision:** Code you never considered writing. If you never thought "should
+  I add a sort here?" then the absence of a sort is not your decision. Absent code
+  is a concern for reviewers and linters, not decision capture.
 
 ## Scope
 
@@ -58,11 +57,10 @@ Common patterns:
 4. **You modeled data in a specific way** — type shapes, required vs optional fields,
    unions vs interfaces. Data modeling has deep downstream consequences.
 
-5. **You chose NOT to do something** — didn't add a feature, didn't use a library,
-   didn't handle an edge case. Deliberate omissions are decisions. The hardest
-   variant: you omitted local defensive code because an upstream module already
-   enforces the invariant. Nothing in your file reveals the dependency — a junior
-   would add a "safety" check that silently hides upstream bugs.
+5. **You actively chose NOT to do something** — you considered adding a feature,
+   library, or edge case handler and decided against it. The key word is *actively*:
+   you had the thought "should I do X?" and chose no. If you never considered X,
+   not doing X is not your decision to document.
 
 6. **You invented something not in the spec** — scaffolding, helpers, workarounds.
    If it's not in the requirements, document why it exists.
@@ -87,31 +85,38 @@ Common patterns:
 - Mechanical work with no alternatives ("created the file the spec said to create")
 - Anything a junior could figure out from reading surrounding code, types, or tests
 - Test code — structure, helpers, coverage boundaries, assertion patterns
+- Absent code you never considered writing — if the thought never crossed your mind,
+  the absence is not a decision you can document
 
 ## Capture Timing
 
 Write each decision **as close to the moment of making it as possible.** After each
-logical unit of work — a function, a type, a config change — ask yourself two questions:
+logical unit of work — a function, a type, a config change — ask yourself:
 
-1. "Did I just make a decision?"
-2. "What did I deliberately skip or omit?"
+"Did I just make a decision about the code I wrote?"
 
 Don't batch. The reasoning degrades quickly.
 
 ## Post-Work Audit
 
-After completing a unit of work, walk through the production code you wrote:
+After completing a unit of work, review the production code **you wrote** — every
+line you added or changed. The audit is scoped to your work, not to what's absent.
+You can only document decisions about code you produced. You cannot meaningfully
+explain the reasoning behind code you never wrote or considered writing.
 
-- **For every file created**: what structural choices did you make?
-- **For every function signature**: what API shape did you choose and why?
-- **For every library call**: what alternatives exist? What implicit behavior are you
-  depending on?
-- **For every type defined**: what modeling tradeoffs are embedded?
-- **For every error path**: what did you handle vs ignore?
-- **For every config value**: what would a different value mean?
-- **For every import you kept from existing code**: would you make the same choice fresh?
+Walk through your code:
 
-Apply the quality test to each finding. Only capture the junior-opaque ones.
+- **For every function you wrote**: what API shape did you choose and why?
+- **For every library call you made**: what alternatives exist? What implicit behavior
+  are you depending on?
+- **For every type you defined**: what modeling tradeoffs are embedded?
+- **For every error path you implemented**: what did you handle and why that way?
+- **For every config value you set**: what would a different value mean?
+
+Do NOT audit for absent code — features you didn't add, checks you didn't write,
+patterns you never considered. If you never had the thought "should I do X?" then
+not doing X is not your decision to document. Absent code is a concern for linters,
+reviewers, and structural checks — not for decision capture.
 
 ## Writing Good Entries
 
