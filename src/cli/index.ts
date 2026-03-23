@@ -3,6 +3,7 @@
 import { Command } from "commander";
 import { runPrime } from "./prime.js";
 import { runInit, promptForAnswers, printNextSteps } from "./commands/init.js";
+import { registerSyncCommand } from "./commands/sync.js";
 
 const program = new Command();
 
@@ -38,13 +39,7 @@ program
     printNextSteps(result, opts.json ?? false);
   });
 
-program
-  .command("sync")
-  .description("Process staging entries into the decision graph")
-  .option("--json", "Output structured JSON instead of human-readable text")
-  .action((_opts: { json?: boolean }) => {
-    console.log("Not yet implemented. See whygraph-kwi.11.");
-  });
+registerSyncCommand(program);
 
 program
   .command("viz")
