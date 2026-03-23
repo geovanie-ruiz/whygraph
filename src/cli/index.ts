@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { runPrime } from "./prime.js";
 import { runInit, promptForAnswers, printNextSteps } from "./commands/init.js";
 import { registerSyncCommand } from "./commands/sync.js";
+import { registerConfigCommand } from "./commands/config.js";
 
 const program = new Command();
 
@@ -49,12 +50,6 @@ program
     console.log("Not yet implemented. See whygraph-kwi.12.");
   });
 
-program
-  .command("config")
-  .description("View or update whygraph configuration")
-  .option("--json", "Output structured JSON instead of human-readable text")
-  .action((_opts: { json?: boolean }) => {
-    console.log("Not yet implemented.");
-  });
+registerConfigCommand(program);
 
 program.parse();
