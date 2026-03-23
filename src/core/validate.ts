@@ -50,7 +50,7 @@ const KNOWN_DECISION_PROPERTIES = new Set<string>([
 ]);
 
 // Properties that node_patched is NOT allowed to set
-const PATCH_FORBIDDEN = new Set(["affects", "label"]);
+const PATCH_FORBIDDEN = new Set(["label"]);
 
 // All known patchable properties (Decision + Node)
 const KNOWN_PATCHABLE = new Set([
@@ -61,6 +61,7 @@ const KNOWN_PATCHABLE = new Set([
   "tradeoffs",
   "alternatives",
   "status",
+  "affects",
   "supersedes",
   "name",
   "description",
