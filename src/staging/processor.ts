@@ -337,33 +337,43 @@ function entriesToEvents(
 
 // ── Cascade removal ──────────────────────────────────────────
 
+interface CascadeResult {
+  events: WhyEvent[];
+  allRemovedNodeIds: string[];
+}
+
 function collectCascadeRemovals(
   nodeId: string,
   graph: MultiDirectedGraph,
   timestamp: string,
-): WhyEvent[] {
-  const events: WhyEvent[] = [];
+): CascadeResult {
   const removedNodeIds = new Set<string>();
 
-  function removeDescendants(currentId: string): void {
-    if (removedNodeIds.has(currentId)) return;
-    removedNodeIds.add(currentId);
+  // BFS to collect all COMPOSES descendants with depth tracking for leaf-first ordering
+  const depthMap = new Map<string, number>();
+  const queue: Array<{ id: string; depth: number }> = [{ id: nodeId, depth: 0 }];
+  removedNodeIds.add(nodeId);
+  depthMap.set(nodeId, 0);
 
-    // Find COMPOSES children (edges where currentId is source, label COMPOSES)
+  while (queue.length > 0) {
+    const { id: currentId, depth } = queue.shift()!;
+    if (!graph.hasNode(currentId)) continue;
+
     const outEdges = graph.outEdges(currentId);
     for (const edgeKey of outEdges) {
       const attrs = graph.getEdgeAttributes(edgeKey);
       if (attrs.label === "COMPOSES") {
         const target = graph.target(edgeKey);
-        removeDescendants(target);
+        if (!removedNodeIds.has(target)) {
+          removedNodeIds.add(target);
+          depthMap.set(target, depth + 1);
+          queue.push({ id: target, depth: depth + 1 });
+        }
       }
     }
   }
 
-  // Collect all descendants
-  removeDescendants(nodeId);
-
-  // Now generate edge removal events for all edges touching removed nodes
+  // Collect all edges touching removed nodes
   const edgesToRemove = new Set<string>();
   for (const removedId of removedNodeIds) {
     if (!graph.hasNode(removedId)) continue;
@@ -373,28 +383,11 @@ function collectCascadeRemovals(
     }
   }
 
-  for (const edgeKey of edgesToRemove) {
-    const edgeRemoveEvent: EdgeRemovedEvent = {
-      type: "edge_removed",
-      timestamp,
-      id: edgeKey,
-    };
-    events.push(edgeRemoveEvent);
-  }
+  // Check decisions for orphaning / partial affects loss
+  const patchEvents: WhyEvent[] = [];
+  const orphanedEdgeRemovals: WhyEvent[] = [];
+  const orphanedNodeRemovals: WhyEvent[] = [];
 
-  // Remove descendant nodes (not the original node, that's already in the main events)
-  for (const removedId of removedNodeIds) {
-    if (removedId === nodeId) continue; // Already handled by main event
-    const nodeRemoveEvent: NodeRemovedEvent = {
-      type: "node_removed",
-      timestamp,
-      id: removedId,
-    };
-    events.push(nodeRemoveEvent);
-  }
-
-  // Update decision affects arrays to remove references to removed nodes
-  const decisionPatches: WhyEvent[] = [];
   graph.forEachNode((nId, attrs) => {
     const nodeAttrs = attrs as GraphDecisionAttributes;
     if (nodeAttrs.label !== "Decision") return;
@@ -407,26 +400,27 @@ function collectCascadeRemovals(
     if (filteredAffects.length !== affects.length) {
       if (filteredAffects.length === 0) {
         // Decision is fully orphaned — remove it
+        removedNodeIds.add(nId);
+        depthMap.set(nId, 0); // Orphaned decisions treated as top-level removals
         const decisionEdges = graph.edges(nId);
         for (const edgeKey of decisionEdges) {
           if (!edgesToRemove.has(edgeKey)) {
             edgesToRemove.add(edgeKey);
-            decisionPatches.push({
+            orphanedEdgeRemovals.push({
               type: "edge_removed",
               timestamp,
               id: edgeKey,
             } as EdgeRemovedEvent);
           }
         }
-        decisionPatches.push({
+        orphanedNodeRemovals.push({
           type: "node_removed",
           timestamp,
           id: nId,
         } as NodeRemovedEvent);
-        removedNodeIds.add(nId);
       } else {
         // Patch decision affects
-        decisionPatches.push({
+        patchEvents.push({
           type: "node_patched",
           timestamp,
           id: nId,
@@ -436,9 +430,42 @@ function collectCascadeRemovals(
     }
   });
 
-  events.push(...decisionPatches);
+  // Build edge removal events for structural nodes
+  const structuralEdgeRemovals: WhyEvent[] = [];
+  for (const edgeKey of edgesToRemove) {
+    // Skip edges already in orphanedEdgeRemovals
+    if (orphanedEdgeRemovals.some((e) => e.id === edgeKey)) continue;
+    structuralEdgeRemovals.push({
+      type: "edge_removed",
+      timestamp,
+      id: edgeKey,
+    } as EdgeRemovedEvent);
+  }
 
-  return events;
+  // Build node removal events sorted by depth descending (children first, parent last)
+  const structuralNodes = [...removedNodeIds]
+    .filter((id) => !orphanedNodeRemovals.some((e) => e.id === id))
+    .sort((a, b) => (depthMap.get(b) ?? 0) - (depthMap.get(a) ?? 0));
+
+  const structuralNodeRemovals: WhyEvent[] = structuralNodes.map((id) => ({
+    type: "node_removed",
+    timestamp,
+    id,
+  }) as NodeRemovedEvent);
+
+  // Assemble in correct order:
+  // 1. node_patched (decision affects updates)
+  // 2. edge_removed (all edges)
+  // 3. node_removed (children first, parent last; then orphaned decisions)
+  const events: WhyEvent[] = [
+    ...patchEvents,
+    ...structuralEdgeRemovals,
+    ...orphanedEdgeRemovals,
+    ...structuralNodeRemovals,
+    ...orphanedNodeRemovals,
+  ];
+
+  return { events, allRemovedNodeIds: [...removedNodeIds] };
 }
 
 // ── Supersede detection ──────────────────────────────────────
@@ -653,21 +680,34 @@ async function doProcess(whygraphDir: string): Promise<ProcessResult> {
   }
 
   // 10. Handle cascade removals for node-removed entries
+  // collectCascadeRemovals now includes the root node_removed event in correct order,
+  // so we strip root node_removed from validEvents and let cascade handle everything.
   const cascadeEvents: WhyEvent[] = [];
-  const removedNodeIds: string[] = [];
+  const allRemovedNodeIds: string[] = [];
+  const rootRemovalIds = new Set<string>();
+
   for (const event of validEvents) {
     if (event.type === "node_removed") {
-      removedNodeIds.push(event.id);
+      rootRemovalIds.add(event.id);
       if (graph.hasNode(event.id)) {
         const cascade = collectCascadeRemovals(
           event.id,
           graph,
           event.timestamp,
         );
-        cascadeEvents.push(...cascade);
+        cascadeEvents.push(...cascade.events);
+        allRemovedNodeIds.push(...cascade.allRemovedNodeIds);
+      } else {
+        allRemovedNodeIds.push(event.id);
       }
     }
   }
+
+  // Remove root node_removed events from validEvents — cascade events include them
+  // in the correct position (parent last)
+  const nonRemovalValidEvents = validEvents.filter(
+    (e) => !(e.type === "node_removed" && rootRemovalIds.has(e.id) && graph.hasNode(e.id)),
+  );
 
   // Validate cascade events too
   const validCascadeEvents: WhyEvent[] = [];
@@ -682,7 +722,7 @@ async function doProcess(whygraphDir: string): Promise<ProcessResult> {
     }
   }
 
-  const allValidEvents = [...validEvents, ...validCascadeEvents];
+  const allValidEvents = [...nonRemovalValidEvents, ...validCascadeEvents];
 
   // 9. Detect supersede candidates
   const supersedeReviews = detectSupersedeCandidates(
@@ -697,9 +737,9 @@ async function doProcess(whygraphDir: string): Promise<ProcessResult> {
   }
   result.reviewsCreated = supersedeReviews.length;
 
-  // Auto-dismiss reviews for removed nodes
-  if (removedNodeIds.length > 0) {
-    await autoDismissForNodes(whygraphDir, removedNodeIds);
+  // Auto-dismiss reviews for all removed nodes (including cascade-removed)
+  if (allRemovedNodeIds.length > 0) {
+    await autoDismissForNodes(whygraphDir, allRemovedNodeIds);
   }
 
   // 11. Dedup check

@@ -441,7 +441,7 @@ describe("Edge validation without context", () => {
 // ── node_patched validation ──────────────────────────────────────────
 
 describe("node_patched validation", () => {
-  it("rejects patch attempting to modify affects", () => {
+  it("allows patch to modify affects (needed for cascade removal)", () => {
     const event: NodePatchedEvent = {
       type: "node_patched",
       timestamp: ts(),
@@ -449,8 +449,7 @@ describe("node_patched validation", () => {
       properties: { affects: [uuid()] },
     };
     const result = validateEvent(event);
-    expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.includes("affects"))).toBe(true);
+    expect(result.valid).toBe(true);
   });
 
   it("rejects patch attempting to modify label", () => {
