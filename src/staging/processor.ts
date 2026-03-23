@@ -3,7 +3,10 @@ import * as fsPromises from "node:fs/promises";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import lockfile from "proper-lockfile";
-import { MultiDirectedGraph } from "graphology";
+// graphology ships CJS-only; named ESM imports fail at runtime under Node
+import graphology from "graphology";
+type MultiDirectedGraph = graphology.MultiDirectedGraph;
+const MultiDirectedGraph = graphology.MultiDirectedGraph;
 import { parseEntries } from "./parser.js";
 import { resolveEntries, type ResolvedEntry } from "./resolver.js";
 import { appendReview, loadReviews, autoDismissForNodes } from "./reviews.js";

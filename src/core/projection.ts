@@ -1,4 +1,7 @@
-import { MultiDirectedGraph } from "graphology";
+// graphology ships CJS-only; named ESM imports fail at runtime under Node
+import graphology from "graphology";
+type MultiDirectedGraph = graphology.MultiDirectedGraph;
+const MultiDirectedGraph = graphology.MultiDirectedGraph;
 import type {
   WhyEvent,
   NodeAddedEvent,
