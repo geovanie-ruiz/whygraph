@@ -78,9 +78,11 @@ Init performs five actions:
 4. Write conditional trigger to platform instruction file
 5. Register MCP server (platform-specific config location)
 
-For Claude Code, init also registers a SessionStart hook that runs
-`whygraph prime` — this gives the parent agent the instructions via hook
-stdout injection, complementing the CLAUDE.md trigger for sub-agents.
+For Claude Code, the CLAUDE.md conditional trigger is the sole delivery
+mechanism. A SessionStart hook was previously used to auto-inject prime output,
+but this was removed because it duplicated the CLAUDE.md trigger — the full
+instructions would appear in context twice, wasting tokens and risking
+divergence if the build cache was stale.
 
 ### SubagentStart hooks
 
@@ -118,7 +120,7 @@ never received them. Fixing delivery fixes compliance.
 ## What's Done
 
 - [x] `whygraph prime` CLI command — outputs full instructions to stdout
-- [x] SessionStart hook runs `whygraph prime` (no fallback)
+- [x] ~~SessionStart hook runs `whygraph prime`~~ — removed, redundant with CLAUDE.md trigger
 - [x] CLAUDE.md has conditional trigger with markers
 - [x] INSTRUCTIONS.md has staging file naming convention
 - [x] AGENT_INSTRUCTION_DESIGN.md documents layered delivery and sub-agent propagation

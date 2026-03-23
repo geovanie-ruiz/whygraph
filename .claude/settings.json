@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "whygraph prime"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "matcher": "",
