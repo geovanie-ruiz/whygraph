@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>whygraph viz</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0d1117; color: #c9d1d9; }
+    #stale-banner {
+      background: #da3633;
+      color: #fff;
+      text-align: center;
+      padding: 8px;
+      font-weight: 600;
+      display:none;
+    }
+    #controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+    }
+    #controls label { font-size: 14px; }
+    #timeline { flex: 1; }
+    #timestamp-display { font-size: 13px; color: #8b949e; }
+    #info-bar {
+      display: flex;
+      gap: 16px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: #8b949e;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+    }
+    #graph-container { width: 100%; height: calc(100vh - 100px); }
+    svg { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="stale-banner">This visualization is stale. Re-run <code>whygraph viz</code> to refresh.</div>
+  <div id="controls">
+    <label for="timeline">Timeline:</label>
+    <input type="range" id="timeline" min="0" max="0" value="0" step="1">
+    <span id="timestamp-display">--</span>
+  </div>
+  <div id="info-bar">
+    <span>Baked: <span id="baked-at"><!--BAKED_AT_DISPLAY--></span></span>
+    <span>Reviews: <span id="review-count"><!--REVIEW_COUNT_DISPLAY--></span></span>
+    <span>Snapshots: <span id="snapshot-count">0</span></span>
+  </div>
+  <div id="graph-container">
+    <svg id="graph-svg"></svg>
+  </div>
+  <script>
+    %%D3_SCRIPT%%
+  </script>
+  <script>
+    const SNAPSHOTS = %%SNAPSHOTS%%;
+    const BAKED_AT = "%%BAKED_AT%%";
+    const REVIEW_COUNT = %%REVIEW_COUNT%%;
+
+    // Initialize UI
+    document.getElementById("baked-at").textContent = BAKED_AT;
+    document.getElementById("review-count").textContent = REVIEW_COUNT;
+    document.getElementById("snapshot-count").textContent = SNAPSHOTS.length;
+
+    const timeline = document.getElementById("timeline");
+    const timestampDisplay = document.getElementById("timestamp-display");
+
+    if (SNAPSHOTS.length > 0) {
+      timeline.max = SNAPSHOTS.length - 1;
+      timeline.value = SNAPSHOTS.length - 1;
+      renderSnapshot(SNAPSHOTS.length - 1);
+    }
+
+    timeline.addEventListener("input", function() {
+      renderSnapshot(parseInt(this.value));
+    });
+
+    function renderSnapshot(index) {
+      if (index < 0 || index >= SNAPSHOTS.length) return;
+      const snap = SNAPSHOTS[index];
+      timestampDisplay.textContent = snap.timestamp;
+
+      const svg = d3.select("#graph-svg");
+      svg.selectAll("*").remove();
+
+      const width = svg.node().clientWidth || 800;
+      const height = svg.node().clientHeight || 600;
+
+      const nodes = snap.graph.nodes.map(n => ({ ...n }));
+      const edges = snap.graph.edges.map(e => ({
+        ...e,
+        source: e.from,
+        target: e.to,
+      }));
+
+      const colorMap = {
+        App: "#f0883e",
+        Feature: "#58a6ff",
+        Component: "#3fb950",
+        Decision: "#d2a8ff",
+      };
+
+      const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(edges).id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+      const g = svg.append("g");
+
+      svg.call(d3.zoom().on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      }));
+
+      const link = g.append("g")
+        .selectAll("line")
+        .data(edges)
+        .join("line")
+        .attr("stroke", "#30363d")
+        .attr("stroke-width", 1.5)
+        .attr("marker-end", "url(#arrow)");
+
+      svg.append("defs").append("marker")
+        .attr("id", "arrow")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 20)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", "#30363d");
+
+      const node = g.append("g")
+        .selectAll("circle")
+        .data(nodes)
+        .join("circle")
+        .attr("r", d => d.label === "App" ? 12 : 8)
+        .attr("fill", d => colorMap[d.label] || "#8b949e")
+        .call(d3.drag()
+          .on("start", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x; d.fy = d.y;
+          })
+          .on("drag", (event, d) => { d.fx = event.x; d.fy = event.y; })
+          .on("end", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null; d.fy = null;
+          })
+        );
+
+      const label = g.append("g")
+        .selectAll("text")
+        .data(nodes)
+        .join("text")
+        .text(d => d.name || d.id)
+        .attr("font-size", 11)
+        .attr("fill", "#c9d1d9")
+        .attr("dx", 14)
+        .attr("dy", 4);
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+        node.attr("cx", d => d.x).attr("cy", d => d.y);
+        label.attr("x", d => d.x).attr("y", d => d.y);
+      });
+    }
+  </script>
+</body>
+</html>
