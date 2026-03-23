@@ -30,6 +30,10 @@ Calibration examples:
   library behavior a junior wouldn't know about.
 - **NOT worth documenting:** Initializing an empty array before a loop when init and
   assignment could be one line — stylistic, visible from context.
+- **Worth documenting:** Omitting local validation because an upstream module already
+  guarantees the invariant — a junior would add a "safety" check that masks upstream
+  bugs. The absence of code is the decision, and nothing in the file explains why it's
+  missing.
 
 ## Scope
 
@@ -55,7 +59,10 @@ Common patterns:
    unions vs interfaces. Data modeling has deep downstream consequences.
 
 5. **You chose NOT to do something** — didn't add a feature, didn't use a library,
-   didn't handle an edge case. Deliberate omissions are decisions.
+   didn't handle an edge case. Deliberate omissions are decisions. The hardest
+   variant: you omitted local defensive code because an upstream module already
+   enforces the invariant. Nothing in your file reveals the dependency — a junior
+   would add a "safety" check that silently hides upstream bugs.
 
 6. **You invented something not in the spec** — scaffolding, helpers, workarounds.
    If it's not in the requirements, document why it exists.
