@@ -1,14 +1,14 @@
 ---
 # whygraph-1f7p
 title: 'Cascade removal: removed_at propagation to children'
-status: todo
+status: completed
 type: task
 priority: high
 tags:
     - afk
     - core
 created_at: 2026-03-24T05:32:48Z
-updated_at: 2026-03-24T05:32:48Z
+updated_at: 2026-03-24T06:12:46Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-whi8

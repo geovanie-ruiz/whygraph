@@ -1,14 +1,14 @@
 ---
 # whygraph-hy0d
 title: 'Supersede candidate detection: overlapping affects'
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
     - afk
     - core
 created_at: 2026-03-24T05:32:48Z
-updated_at: 2026-03-24T05:32:48Z
+updated_at: 2026-03-24T06:12:46Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-whi8

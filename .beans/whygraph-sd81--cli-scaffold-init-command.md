@@ -1,14 +1,14 @@
 ---
 # whygraph-sd81
 title: CLI scaffold + init command
-status: todo
+status: completed
 type: task
 priority: critical
 tags:
     - afk
     - cli
 created_at: 2026-03-24T05:33:40Z
-updated_at: 2026-03-24T05:33:41Z
+updated_at: 2026-03-24T06:12:46Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-addb
