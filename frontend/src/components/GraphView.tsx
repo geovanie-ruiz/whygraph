@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import type {
   Entity,
@@ -20,6 +20,7 @@ interface GraphNode extends d3.SimulationNodeDatum {
 }
 
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
+  id: string;
   type: "COMPOSES" | "AFFECTS" | "SUPERSEDES";
 }
 
@@ -38,48 +39,34 @@ function getDisplayName(entity: Entity): string {
 
 function nodeRadius(label: string): number {
   switch (label) {
-    case "App":
-      return 20;
-    case "Feature":
-      return 14;
-    case "Component":
-      return 10;
-    case "Decision":
-      return 12;
-    default:
-      return 10;
+    case "App": return 20;
+    case "Feature": return 14;
+    case "Component": return 10;
+    case "Decision": return 12;
+    default: return 10;
   }
 }
 
 function nodeColor(label: string): string {
   switch (label) {
-    case "App":
-      return "#1e3a5f";
-    case "Feature":
-      return "#2b8a8a";
-    case "Component":
-      return "#7ec8e3";
-    case "Decision":
-      return "#e07020";
-    default:
-      return "#999";
+    case "App": return "#1e3a5f";
+    case "Feature": return "#2b8a8a";
+    case "Component": return "#7ec8e3";
+    case "Decision": return "#e07020";
+    default: return "#999";
   }
 }
 
 function linkStroke(type: string): { dash: string; color: string } {
   switch (type) {
-    case "COMPOSES":
-      return { dash: "", color: "#999" };
-    case "AFFECTS":
-      return { dash: "6,3", color: "#e07020" };
-    case "SUPERSEDES":
-      return { dash: "2,3", color: "#c0392b" };
-    default:
-      return { dash: "", color: "#999" };
+    case "COMPOSES": return { dash: "", color: "#999" };
+    case "AFFECTS": return { dash: "6,3", color: "#e07020" };
+    case "SUPERSEDES": return { dash: "2,3", color: "#c0392b" };
+    default: return { dash: "", color: "#999" };
   }
 }
 
-function buildGraph(entities: Map<string, Entity>): {
+function deriveGraphData(entities: Map<string, Entity>): {
   nodes: GraphNode[];
   links: GraphLink[];
 } {
@@ -96,6 +83,7 @@ function buildGraph(entities: Map<string, Entity>): {
 
     if (isStructural(entity) && entity.parent && idSet.has(entity.parent)) {
       links.push({
+        id: `composes-${entity.parent}-${entity.id}`,
         source: entity.parent,
         target: entity.id,
         type: "COMPOSES",
@@ -106,6 +94,7 @@ function buildGraph(entities: Map<string, Entity>): {
       for (const affectedId of entity.affects) {
         if (idSet.has(affectedId)) {
           links.push({
+            id: `affects-${entity.id}-${affectedId}`,
             source: entity.id,
             target: affectedId,
             type: "AFFECTS",
@@ -114,6 +103,7 @@ function buildGraph(entities: Map<string, Entity>): {
       }
       if (entity.supersedes && idSet.has(entity.supersedes)) {
         links.push({
+          id: `supersedes-${entity.id}-${entity.supersedes}`,
           source: entity.id,
           target: entity.supersedes,
           type: "SUPERSEDES",
@@ -127,35 +117,24 @@ function buildGraph(entities: Map<string, Entity>): {
 
 export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: GraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(
-    null,
-  );
+  const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
+  const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const initializedRef = useRef(false);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
-  const handleNodeClick = useCallback(
-    (_event: MouseEvent, d: GraphNode) => {
-      onSelect(d.id);
-    },
-    [onSelect],
-  );
-
+  // One-time SVG setup: zoom, container group
   useEffect(() => {
-    const svg = d3.select(svgRef.current);
-    if (!svgRef.current) return;
+    if (!svgRef.current || initializedRef.current) return;
+    initializedRef.current = true;
 
+    const svg = d3.select(svgRef.current);
     const width = 800;
     const height = 600;
-
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
-    // Clear previous content
-    svg.selectAll("*").remove();
-
-    const { nodes, links } = buildGraph(entities);
-
-    if (nodes.length === 0) return;
-
-    // Container group for zoom/pan
     const g = svg.append("g");
+    gRef.current = g;
 
     // Zoom behavior
     const zoom = d3
@@ -165,52 +144,99 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         g.attr("transform", event.transform.toString());
       });
 
-    svg.call(zoom as unknown as (selection: d3.Selection<SVGSVGElement | null, unknown, null, undefined>) => void);
+    svg.call(zoom as never);
 
-    // Force simulation
+    // Create layer groups (persistent, not recreated)
+    g.append("g").attr("class", "links");
+    g.append("g").attr("class", "nodes");
+  }, []);
+
+  // Update graph data when entities change — WITHOUT tearing down the simulation
+  useEffect(() => {
+    const g = gRef.current;
+    if (!g || !svgRef.current) return;
+
+    const width = 800;
+    const height = 600;
+    const { nodes: newNodes, links: newLinks } = deriveGraphData(entities);
+
+    // Preserve positions from existing simulation nodes
+    const oldSim = simulationRef.current;
+    const oldPositions = new Map<string, { x: number; y: number }>();
+    if (oldSim) {
+      for (const n of oldSim.nodes()) {
+        if (n.x != null && n.y != null) {
+          oldPositions.set(n.id, { x: n.x, y: n.y });
+        }
+      }
+      oldSim.stop();
+    }
+
+    // Apply old positions to new nodes
+    for (const n of newNodes) {
+      const old = oldPositions.get(n.id);
+      if (old) {
+        n.x = old.x;
+        n.y = old.y;
+      }
+    }
+
+    // Create simulation
     const simulation = d3
-      .forceSimulation<GraphNode>(nodes)
+      .forceSimulation<GraphNode>(newNodes)
       .force(
         "link",
-        d3
-          .forceLink<GraphNode, GraphLink>(links)
-          .id((d) => d.id)
-          .distance(180),
+        d3.forceLink<GraphNode, GraphLink>(newLinks).id((d) => d.id).distance(180),
       )
       .force("charge", d3.forceManyBody().strength(-800))
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collide", d3.forceCollide().radius(40));
 
+    // If we had old positions, start cooler (don't re-explode the layout)
+    if (oldPositions.size > 0) {
+      simulation.alpha(0.3);
+    }
+
     simulationRef.current = simulation;
 
-    // Draw links
-    const link = g
-      .append("g")
-      .attr("class", "links")
-      .selectAll("line")
-      .data(links)
-      .join("line")
+    // --- UPDATE LINKS ---
+    const linkSelection = g
+      .select<SVGGElement>(".links")
+      .selectAll<SVGLineElement, GraphLink>("line")
+      .data(newLinks, (d) => d.id);
+
+    linkSelection.exit().remove();
+
+    const linkEnter = linkSelection
+      .enter()
+      .append("line")
       .attr("stroke-width", 1.5)
       .attr("stroke", (d) => linkStroke(d.type).color)
       .attr("stroke-dasharray", (d) => linkStroke(d.type).dash);
 
-    // Draw node groups
-    const node = g
-      .append("g")
-      .attr("class", "nodes")
-      .selectAll<SVGGElement, GraphNode>("g")
-      .data(nodes)
-      .join("g")
-      .attr("cursor", "pointer")
-      // Click is handled in drag-end (below) to avoid conflict with drag behavior
+    const allLinks = linkEnter.merge(linkSelection);
 
-    // Node shapes
-    node.each(function (d) {
+    // --- UPDATE NODES ---
+    const nodeSelection = g
+      .select<SVGGElement>(".nodes")
+      .selectAll<SVGGElement, GraphNode>("g.node-group")
+      .data(newNodes, (d) => d.id);
+
+    nodeSelection.exit().remove();
+
+    const nodeEnter = nodeSelection
+      .enter()
+      .append("g")
+      .attr("class", "node-group")
+      .attr("cursor", "pointer");
+
+    // Draw shapes on enter
+    nodeEnter.each(function (d) {
       const el = d3.select(this);
       if (d.label === "Decision") {
-        // Diamond shape for decisions
         const r = nodeRadius(d.label);
         el.append("rect")
+          .attr("class", "node-shape")
           .attr("width", r * 1.4)
           .attr("height", r * 1.4)
           .attr("x", (-r * 1.4) / 2)
@@ -221,16 +247,32 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
           .attr("stroke-width", 1.5);
       } else {
         el.append("circle")
+          .attr("class", "node-shape")
           .attr("r", nodeRadius(d.label))
           .attr("fill", nodeColor(d.label))
           .attr("stroke", "#fff")
           .attr("stroke-width", 1.5);
       }
+
+      // Label
+      el.append("text")
+        .attr("dy", nodeRadius(d.label) + 14)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "11px")
+        .attr("fill", "#333")
+        .attr("pointer-events", "none")
+        .text(d.displayName);
     });
 
-    // Gap highlight: pulsing ring on highlighted nodes
+    const allNodes = nodeEnter.merge(nodeSelection);
+
+    // --- HIGHLIGHTS (reapply on every update) ---
+    allNodes.select(".gap-highlight").remove();
+    allNodes.select(".stale-ref-badge").remove();
+    allNodes.select(".stale-ref-badge-text").remove();
+
     if (highlightedIds && highlightedIds.size > 0) {
-      node
+      allNodes
         .filter((d) => highlightedIds.has(d.id))
         .append("circle")
         .attr("class", "gap-highlight")
@@ -242,9 +284,8 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         .attr("opacity", 0.8);
     }
 
-    // Stale ref badge: warning "!" indicator
     if (staleRefIds && staleRefIds.size > 0) {
-      const staleNodes = node.filter((d) => staleRefIds.has(d.id));
+      const staleNodes = allNodes.filter((d) => staleRefIds.has(d.id));
       staleNodes
         .append("circle")
         .attr("class", "stale-ref-badge")
@@ -267,62 +308,52 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         .text("!");
     }
 
-    // Node labels
-    node
-      .append("text")
-      .text((d) => d.displayName)
-      .attr("dy", (d) => nodeRadius(d.label) + 14)
-      .attr("text-anchor", "middle")
-      .attr("font-size", "11px")
-      .attr("fill", "#333")
-      .attr("pointer-events", "none");
-
-    // Drag behavior — track whether drag actually moved to distinguish from click
+    // --- DRAG (with click detection) ---
     let dragged = false;
     const drag = d3
       .drag<SVGGElement, GraphNode>()
-      .on("start", (_event: d3.D3DragEvent<SVGGElement, GraphNode, GraphNode>, d: GraphNode) => {
+      .on("start", (event, d) => {
         dragged = false;
-        if (!_event.active) simulation.alphaTarget(0.3).restart();
+        if (!event.active) simulation.alphaTarget(0.3).restart();
         d.fx = d.x;
         d.fy = d.y;
       })
-      .on("drag", (event: d3.D3DragEvent<SVGGElement, GraphNode, GraphNode>, d: GraphNode) => {
+      .on("drag", (event, d) => {
         dragged = true;
         d.fx = event.x;
         d.fy = event.y;
       })
-      .on("end", (_event: d3.D3DragEvent<SVGGElement, GraphNode, GraphNode>, d: GraphNode) => {
-        if (!_event.active) simulation.alphaTarget(0);
+      .on("end", (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
         d.fx = null;
         d.fy = null;
-        // Fire click only if the node wasn't actually dragged
         if (!dragged) {
-          onSelect(d.id);
+          onSelectRef.current(d.id);
         }
       });
 
-    node.call(drag);
+    allNodes.call(drag);
 
-    // Tick handler
+    // --- TICK ---
     simulation.on("tick", () => {
-      link
+      allLinks
         .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
         .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
         .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
         .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
 
-      node.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
+      allNodes.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
     });
 
     return () => {
       simulation.stop();
     };
-  }, [entities, handleNodeClick, highlightedIds, staleRefIds]);
+  }, [entities, highlightedIds, staleRefIds]);
 
   return (
     <svg
       ref={svgRef as React.RefObject<SVGSVGElement>}
+      data-testid="graph-view"
       style={{ width: "100%", height: "600px", border: "1px solid #ddd", borderRadius: "8px" }}
     />
   );
