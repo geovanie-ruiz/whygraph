@@ -1,14 +1,14 @@
 ---
 # whygraph-5faf
 title: 'getGaps: nodes with no inbound AFFECTS edges'
-status: todo
+status: completed
 type: task
 priority: critical
 tags:
     - afk
     - core
 created_at: 2026-03-24T05:33:12Z
-updated_at: 2026-03-24T05:33:12Z
+updated_at: 2026-03-24T06:09:05Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-whi8
