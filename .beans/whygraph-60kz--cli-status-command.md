@@ -1,14 +1,14 @@
 ---
 # whygraph-60kz
 title: CLI status command
-status: in-progress
+status: completed
 type: task
 priority: normal
 tags:
     - afk
     - cli
 created_at: 2026-03-24T05:33:40Z
-updated_at: 2026-03-24T06:23:31Z
+updated_at: 2026-03-24T06:27:35Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-8l5e

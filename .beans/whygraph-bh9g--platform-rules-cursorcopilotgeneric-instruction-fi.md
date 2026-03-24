@@ -1,14 +1,14 @@
 ---
 # whygraph-bh9g
 title: 'Platform rules: Cursor/Copilot/generic instruction files'
-status: in-progress
+status: completed
 type: task
 priority: normal
 tags:
     - afk
     - platform
 created_at: 2026-03-24T05:36:00Z
-updated_at: 2026-03-24T06:23:31Z
+updated_at: 2026-03-24T06:27:35Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-sd81
