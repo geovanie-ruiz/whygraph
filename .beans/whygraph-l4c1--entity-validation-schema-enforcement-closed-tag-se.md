@@ -1,14 +1,14 @@
 ---
 # whygraph-l4c1
 title: 'Entity validation: schema enforcement + closed tag set'
-status: todo
+status: completed
 type: task
 priority: critical
 tags:
     - afk
     - core
 created_at: 2026-03-24T05:32:25Z
-updated_at: 2026-03-24T05:32:48Z
+updated_at: 2026-03-24T06:01:34Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-517u
