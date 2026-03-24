@@ -1,14 +1,14 @@
 ---
 # whygraph-517u
 title: Entity types + YAML front matter schema
-status: todo
+status: in-progress
 type: task
 priority: critical
 tags:
     - afk
     - core
 created_at: 2026-03-24T05:32:25Z
-updated_at: 2026-03-24T05:32:25Z
+updated_at: 2026-03-24T05:54:50Z
 parent: whygraph-ileg
 ---
 
