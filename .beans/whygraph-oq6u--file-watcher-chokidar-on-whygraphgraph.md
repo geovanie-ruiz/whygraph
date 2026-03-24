@@ -1,14 +1,14 @@
 ---
 # whygraph-oq6u
 title: 'File watcher: chokidar on .whygraph/graph/'
-status: todo
+status: completed
 type: task
 priority: critical
 tags:
     - afk
     - server
 created_at: 2026-03-24T05:34:05Z
-updated_at: 2026-03-24T05:34:05Z
+updated_at: 2026-03-24T06:16:18Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-8l5e

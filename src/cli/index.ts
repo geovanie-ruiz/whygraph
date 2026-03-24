@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { registerConfigCommand } from "./commands/config.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerPrimeCommand } from "./commands/prime.js";
+import { registerServeCommand } from "./commands/serve.js";
 import { registerValidateCommand } from "./commands/validate.js";
 
 const program = new Command();
@@ -16,6 +17,7 @@ program
 registerConfigCommand(program);
 registerInitCommand(program);
 registerPrimeCommand(program);
+registerServeCommand(program);
 registerValidateCommand(program);
 
 program.parse();

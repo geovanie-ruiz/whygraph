@@ -1,14 +1,14 @@
 ---
 # whygraph-fxnn
 title: GraphQL schema definition + server setup
-status: todo
+status: completed
 type: task
 priority: critical
 tags:
     - afk
     - server
 created_at: 2026-03-24T05:34:27Z
-updated_at: 2026-03-24T05:34:27Z
+updated_at: 2026-03-24T06:17:43Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-8l5e

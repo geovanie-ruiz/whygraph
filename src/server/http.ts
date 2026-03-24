@@ -1,11 +1,17 @@
-import { createServer } from "node:http";
+import { createServer, type Server } from "node:http";
 import { createYoga } from "graphql-yoga";
 import { buildSchema } from "./schema.js";
 import type { ServerCore } from "./core.js";
 
 const DEFAULT_PORT = 4777;
 
-export function createHttpServer(core: ServerCore) {
+export interface HttpServer {
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  readonly server: Server;
+}
+
+export function createHttpServer(core: ServerCore, port: number = DEFAULT_PORT): HttpServer {
   const schema = buildSchema(core);
 
   const yoga = createYoga({
@@ -26,19 +32,26 @@ export function createHttpServer(core: ServerCore) {
     yoga(req, res);
   });
 
-  return server;
+  return {
+    server,
+    start(): Promise<void> {
+      return new Promise((resolve, reject) => {
+        server.on("error", reject);
+        server.listen(port, () => resolve());
+      });
+    },
+    stop(): Promise<void> {
+      return new Promise((resolve) => {
+        server.close(() => resolve());
+      });
+    },
+  };
 }
 
 export function startServer(
   core: ServerCore,
   port: number = DEFAULT_PORT,
-): Promise<ReturnType<typeof createServer>> {
-  const server = createHttpServer(core);
-
-  return new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.listen(port, () => {
-      resolve(server);
-    });
-  });
+): Promise<HttpServer> {
+  const httpServer = createHttpServer(core, port);
+  return httpServer.start().then(() => httpServer);
 }

@@ -4,7 +4,7 @@ import { ServerCore } from "../../src/server/core.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
-import type { Server } from "node:http";
+import type { HttpServer } from "../../src/server/http.js";
 
 async function makeTempDir(): Promise<string> {
   return fs.mkdtemp(path.join(tmpdir(), "whygraph-http-test-"));
@@ -23,7 +23,7 @@ updated_at: "2026-03-24T00:00:00Z"
 }
 
 describe("HTTP server", () => {
-  let server: Server;
+  let httpServer: HttpServer;
   let baseUrl: string;
   let core: ServerCore;
 
@@ -35,22 +35,20 @@ describe("HTTP server", () => {
 
     core = new ServerCore(whygraphDir);
     await core.load();
-    server = createHttpServer(core);
+    httpServer = createHttpServer(core, 0);
 
     await new Promise<void>((resolve) => {
-      server.listen(0, () => resolve());
+      httpServer.server.listen(0, () => resolve());
     });
 
-    const addr = server.address();
+    const addr = httpServer.server.address();
     if (addr && typeof addr === "object") {
       baseUrl = `http://localhost:${addr.port}`;
     }
   });
 
   afterEach(async () => {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
+    await httpServer.stop();
   });
 
   it("health endpoint returns 200", async () => {
