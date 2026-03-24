@@ -10,12 +10,16 @@ import {
   EntityStoreContext,
 } from "./lib/store.js";
 import { wsClient } from "./lib/graphql.js";
+import { ThemeProvider } from "./lib/theme.js";
 import { GraphView } from "./components/GraphView.js";
 import { DetailPanel } from "./components/DetailPanel.js";
 import { GapHighlight } from "./components/GapHighlight.js";
-import { TagFilter } from "./components/TagFilter.js";
 import type { DecisionTag } from "./components/TagFilter.js";
 import { StaleRefBadge } from "./components/StaleRefBadge.js";
+import { Header } from "./components/Header.js";
+import { Footer } from "./components/Footer.js";
+import { MenuDropdown } from "./components/MenuDropdown.js";
+import "./styles/app-shell.css";
 
 function EntityDashboard() {
   const [entities, setEntities] = useState<Map<string, Entity>>(new Map());
@@ -24,6 +28,7 @@ function EntityDashboard() {
   const [selectedTags, setSelectedTags] = useState<Set<DecisionTag>>(new Set());
   const [staleRefIds, setStaleRefIds] = useState<Set<string>>(new Set());
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = wsClient.subscribe<{
@@ -57,6 +62,14 @@ function EntityDashboard() {
 
   const handleSelect = useCallback((entityId: string) => {
     setSelectedEntityId((prev) => (prev === entityId ? null : entityId));
+  }, []);
+
+  const handleMenuToggle = useCallback(() => {
+    setMenuOpen((prev) => !prev);
+  }, []);
+
+  const handleMenuClose = useCallback(() => {
+    setMenuOpen(false);
   }, []);
 
   const selectedEntity = selectedEntityId ? entities.get(selectedEntityId) ?? null : null;
@@ -99,7 +112,6 @@ function EntityDashboard() {
     }
 
     // Second pass: include structural nodes connected to matching decisions
-    // Also include their parent chain
     const addWithParents = (nodeId: string) => {
       const entity = entities.get(nodeId);
       if (!entity || filtered.has(nodeId)) return;
@@ -118,39 +130,17 @@ function EntityDashboard() {
 
   return (
     <EntityStoreContext.Provider value={storeValue}>
-      <div style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-        <h1>whygraph</h1>
-        <div
-          style={{
-            display: "inline-block",
-            padding: "0.25rem 0.5rem",
-            borderRadius: "4px",
-            backgroundColor: connected ? "#d4edda" : "#f8d7da",
-            color: connected ? "#155724" : "#721c24",
-            marginBottom: "1rem",
-          }}
-        >
-          {connected ? "Connected" : "Connecting..."}
-        </div>
-        <div style={{ marginTop: "1rem" }}>
-          <p>
-            <strong>Entities:</strong> {entities.size}
-          </p>
-          <p>
-            <strong>Nodes:</strong> {nodeCount}
-          </p>
-          <p>
-            <strong>Decisions:</strong> {decisionCount}
-          </p>
-        </div>
-        <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "center" }}>
-          <GapHighlight onGapIdsChange={setGapIds} />
-          <StaleRefBadge onStaleRefIdsChange={setStaleRefIds} />
-        </div>
-        <div style={{ marginTop: "0.75rem" }}>
-          <TagFilter onTagsChange={setSelectedTags} />
-        </div>
-        <div style={{ marginTop: "2rem", position: "relative" }}>
+      <div className="app-shell">
+        <Header connected={connected} menuOpen={menuOpen} onMenuToggle={handleMenuToggle}>
+          <MenuDropdown
+            open={menuOpen}
+            onClose={handleMenuClose}
+            onTagsChange={setSelectedTags}
+            onGapIdsChange={setGapIds}
+            onStaleRefIdsChange={setStaleRefIds}
+          />
+        </Header>
+        <div className="app-graph-area">
           <GraphView
             entities={filteredEntities}
             onSelect={handleSelect}
@@ -163,6 +153,16 @@ function EntityDashboard() {
             onClose={() => setSelectedEntityId(null)}
           />
         </div>
+        <Footer
+          entityCount={entities.size}
+          nodeCount={nodeCount}
+          decisionCount={decisionCount}
+        />
+      </div>
+      {/* Always mounted so GraphQL queries run on load, not on first menu open */}
+      <div style={{ display: "none" }}>
+        <GapHighlight onGapIdsChange={setGapIds} />
+        <StaleRefBadge onStaleRefIdsChange={setStaleRefIds} />
       </div>
     </EntityStoreContext.Provider>
   );
@@ -171,7 +171,9 @@ function EntityDashboard() {
 export function App() {
   return (
     <Provider value={urqlClient}>
-      <EntityDashboard />
+      <ThemeProvider>
+        <EntityDashboard />
+      </ThemeProvider>
     </Provider>
   );
 }

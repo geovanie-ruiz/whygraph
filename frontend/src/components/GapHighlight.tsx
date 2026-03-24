@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "urql";
+import "../styles/components/gap-highlight.css";
 
 const GAPS_QUERY = `
   query Gaps {
@@ -43,23 +44,16 @@ export function GapHighlight({ onGapIdsChange }: GapHighlightProps) {
   };
 
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+    <div className="gap-toggle">
       <button
         type="button"
+        className="gap-toggle__btn"
         onClick={handleToggle}
         aria-pressed={enabled}
-        style={{
-          padding: "0.25rem 0.75rem",
-          borderRadius: "4px",
-          border: "1px solid #ccc",
-          backgroundColor: enabled ? "#ff6b35" : "#fff",
-          color: enabled ? "#fff" : "#333",
-          cursor: "pointer",
-        }}
       >
         {enabled ? "Hide Gaps" : "Show Gaps"}
       </button>
-      <span data-testid="gap-count">
+      <span className="gap-toggle__count" data-testid="gap-count">
         {gapCount} gap{gapCount !== 1 ? "s" : ""}
       </span>
     </div>

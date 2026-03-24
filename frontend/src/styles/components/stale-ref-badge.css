@@ -1,0 +1,124 @@
+.stale-ref-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.stale-ref-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: rgba(238, 125, 119, 0.1);
+  color: var(--color-error);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  border-radius: var(--radius);
+  border: 1px solid rgba(238, 125, 119, 0.3);
+  transition: background var(--transition-fast);
+}
+
+.stale-ref-btn:hover {
+  background: rgba(238, 125, 119, 0.2);
+}
+
+/* Modal overlay */
+.stale-ref-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.stale-ref-modal {
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: var(--space-6);
+  max-width: 480px;
+  width: 100%;
+  box-shadow: var(--shadow-glow);
+}
+
+.stale-ref-modal h3 {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.stale-ref-modal p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.stale-ref-modal code {
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+}
+
+.stale-ref-modal__field {
+  margin: var(--space-4) 0;
+}
+
+.stale-ref-modal__field label {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.stale-ref-modal__input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-0);
+  color: var(--text-primary);
+  border: 1px solid var(--border-ghost);
+  font-size: var(--text-base);
+}
+
+.stale-ref-modal__input:focus {
+  outline: 1px solid var(--color-primary);
+  outline-offset: -1px;
+}
+
+.stale-ref-modal__actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.btn-ghost {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-ghost);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border-radius: var(--radius);
+}
+
+.btn-ghost:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.btn-primary {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border-radius: var(--radius);
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}

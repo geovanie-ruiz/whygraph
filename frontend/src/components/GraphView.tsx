@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import * as d3 from "d3";
 import type {
   Entity,
@@ -115,13 +115,26 @@ function deriveGraphData(entities: Map<string, Entity>): {
   return { nodes, links };
 }
 
+function getThemeColor(varName: string, fallback: string): string {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return value || fallback;
+}
+
 export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: GraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
   const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const initializedRef = useRef(false);
+  const sizeRef = useRef({ width: 800, height: 600 });
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+
+  const updateLabelColors = useCallback(() => {
+    const g = gRef.current;
+    if (!g) return;
+    const labelColor = getThemeColor("--text-secondary", "#8FA3B8");
+    g.select(".nodes").selectAll<SVGTextElement, GraphNode>("text").attr("fill", labelColor);
+  }, []);
 
   // One-time SVG setup: zoom, container group
   useEffect(() => {
@@ -129,8 +142,7 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
     initializedRef.current = true;
 
     const svg = d3.select(svgRef.current);
-    const width = 800;
-    const height = 600;
+    const { width, height } = sizeRef.current;
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
     const g = svg.append("g");
@@ -151,13 +163,54 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
     g.append("g").attr("class", "nodes");
   }, []);
 
+  // ResizeObserver: update viewBox and recenter when container resizes
+  useEffect(() => {
+    const svgEl = svgRef.current;
+    if (!svgEl) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          sizeRef.current = { width, height };
+          d3.select(svgEl).attr("viewBox", `0 0 ${width} ${height}`);
+          const sim = simulationRef.current;
+          if (sim) {
+            // Update centering targets and unpin nodes so they can readjust
+            sim.force("x", d3.forceX(width / 2).strength(0.1));
+            sim.force("y", d3.forceY(height / 2).strength(0.1));
+            for (const n of sim.nodes()) {
+              n.fx = null;
+              n.fy = null;
+            }
+            sim.alpha(0.05).restart();
+          }
+        }
+      }
+    });
+
+    observer.observe(svgEl);
+    return () => observer.disconnect();
+  }, []);
+
+  // Watch for theme changes and update label colors
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      updateLabelColors();
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, [updateLabelColors]);
+
   // Update graph data when entities change — WITHOUT tearing down the simulation
   useEffect(() => {
     const g = gRef.current;
     if (!g || !svgRef.current) return;
 
-    const width = 800;
-    const height = 600;
+    const { width, height } = sizeRef.current;
     const { nodes: newNodes, links: newLinks } = deriveGraphData(entities);
 
     // Preserve positions from existing simulation nodes
@@ -172,16 +225,25 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
       oldSim.stop();
     }
 
-    // Apply old positions to new nodes
+    // Apply old positions to new nodes; new nodes start at center
+    const cx = width / 2;
+    const cy = height / 2;
     for (const n of newNodes) {
       const old = oldPositions.get(n.id);
       if (old) {
         n.x = old.x;
         n.y = old.y;
+      } else {
+        // Seed at center with tiny jitter so charge can differentiate them
+        n.x = cx + (Math.random() - 0.5) * 2;
+        n.y = cy + (Math.random() - 0.5) * 2;
       }
     }
 
-    // Create simulation
+    // Simulation: nodes unfurl from center via charge repulsion.
+    // forceX/forceY keep the graph centered (unlike forceCenter, they work
+    // through velocity so they respect alpha decay and don't fight at rest).
+    // When alpha drops low enough, we pin all nodes (set fx/fy) for a dead stop.
     const simulation = d3
       .forceSimulation<GraphNode>(newNodes)
       .force(
@@ -189,15 +251,17 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         d3.forceLink<GraphNode, GraphLink>(newLinks).id((d) => d.id).distance(180),
       )
       .force("charge", d3.forceManyBody().strength(-800))
-      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("x", d3.forceX(cx).strength(0.1))
+      .force("y", d3.forceY(cy).strength(0.1))
       .force("collide", d3.forceCollide().radius(40))
-      .alphaDecay(0.1)
-      .alphaMin(0.01)
+      .alphaDecay(0.028)
+      .alphaMin(0.001)
+      .alphaTarget(0)
       .velocityDecay(0.6);
 
     // If we had old positions, start cooler (don't re-explode the layout)
     if (oldPositions.size > 0) {
-      simulation.alpha(0.1);
+      simulation.alpha(0.15);
     }
 
     simulationRef.current = simulation;
@@ -262,7 +326,7 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         .attr("dy", nodeRadius(d.label) + 14)
         .attr("text-anchor", "middle")
         .attr("font-size", "11px")
-        .attr("fill", "#333")
+        .attr("fill", getThemeColor("--text-secondary", "#8FA3B8"))
         .attr("pointer-events", "none")
         .text(d.displayName);
     });
@@ -312,11 +376,17 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
     }
 
     // --- DRAG (with click detection) ---
+    // --- DRAG (with click detection) ---
     let dragged = false;
     const drag = d3
       .drag<SVGGElement, GraphNode>()
       .on("start", (event, d) => {
         dragged = false;
+        // Unpin all nodes so the layout can react to the drag
+        for (const n of simulation.nodes()) {
+          n.fx = null;
+          n.fy = null;
+        }
         if (!event.active) simulation.alphaTarget(0.3).restart();
         d.fx = d.x;
         d.fy = d.y;
@@ -337,7 +407,7 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
 
     allNodes.call(drag);
 
-    // --- TICK ---
+    // --- TICK (with pin-on-settle) ---
     simulation.on("tick", () => {
       allLinks
         .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
@@ -346,6 +416,17 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
 
       allNodes.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
+
+      // Once alpha is low, pin every node at its current position and stop.
+      // Pinned nodes (fx/fy set) are immovable — zero drift guaranteed.
+      // Drag start unpins them so the layout can still react to interaction.
+      if (simulation.alpha() < 0.03) {
+        for (const n of simulation.nodes()) {
+          n.fx = n.x;
+          n.fy = n.y;
+        }
+        simulation.stop();
+      }
     });
 
     return () => {
@@ -357,7 +438,7 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
     <svg
       ref={svgRef as React.RefObject<SVGSVGElement>}
       data-testid="graph-view"
-      style={{ width: "100%", height: "600px", border: "1px solid #ddd", borderRadius: "8px" }}
+      className="graph-svg"
     />
   );
 }

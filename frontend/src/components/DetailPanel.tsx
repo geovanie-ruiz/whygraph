@@ -48,17 +48,7 @@ function DecisionDetail({
         <div className="detail-field">
           <strong>Tags:</strong>{" "}
           {entity.tags.map((tag) => (
-            <span
-              key={tag}
-              style={{
-                display: "inline-block",
-                padding: "2px 8px",
-                margin: "2px",
-                borderRadius: "12px",
-                backgroundColor: "#e8e8e8",
-                fontSize: "12px",
-              }}
-            >
+            <span key={tag} className="detail-tag">
               {tag}
             </span>
           ))}
@@ -142,37 +132,21 @@ export function DetailPanel({ entity, entities, onClose }: DetailPanelProps) {
   const isOpen = entity !== null;
 
   return (
-    <div
-      data-testid="detail-panel"
-      style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        width: "400px",
-        height: "100vh",
-        backgroundColor: "#fff",
-        boxShadow: "-2px 0 8px rgba(0,0,0,0.15)",
-        transform: isOpen ? "translateX(0)" : "translateX(100%)",
-        transition: "transform 0.3s ease-in-out",
-        overflowY: "auto",
-        padding: "1.5rem",
-        zIndex: 1000,
-      }}
-    >
+    <>
+      {isOpen && (
+        <div className="detail-panel__backdrop" onClick={onClose} />
+      )}
+      <div
+        data-testid="detail-panel"
+        className="detail-panel"
+        data-open={isOpen}
+      >
       {entity && (
         <>
           <button
             data-testid="detail-close"
             onClick={onClose}
-            style={{
-              position: "absolute",
-              top: "1rem",
-              right: "1rem",
-              background: "none",
-              border: "none",
-              fontSize: "1.5rem",
-              cursor: "pointer",
-            }}
+            className="detail-panel__close"
             aria-label="Close"
           >
             ×
@@ -185,5 +159,6 @@ export function DetailPanel({ entity, entities, onClose }: DetailPanelProps) {
         </>
       )}
     </div>
+    </>
   );
 }

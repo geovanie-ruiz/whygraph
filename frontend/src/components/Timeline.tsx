@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from "react";
 import type { Entity } from "../lib/store.js";
+import "../styles/components/timeline.css";
 
 export interface TimelineProps {
   entities: Map<string, Entity>;
@@ -69,52 +70,28 @@ export function Timeline({
   const isLive = filterTimestamp === null;
 
   return (
-    <div
-      data-testid="timeline"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "1rem",
-        padding: "0.75rem 1rem",
-        backgroundColor: "#f8f9fa",
-        borderRadius: "8px",
-        marginBottom: "1rem",
-      }}
-    >
-      <label
-        htmlFor="timeline-slider"
-        style={{ fontWeight: "bold", whiteSpace: "nowrap" }}
-      >
+    <div className="timeline" data-testid="timeline">
+      <label htmlFor="timeline-slider" className="timeline__label">
         Timeline:
       </label>
       <input
         id="timeline-slider"
+        className="timeline__slider"
         data-testid="timeline-slider"
         type="range"
         min={min}
         max={max}
         value={currentValue}
         onChange={handleSliderChange}
-        style={{ flex: 1 }}
       />
-      <span
-        data-testid="timeline-label"
-        style={{ fontSize: "12px", minWidth: "180px", textAlign: "center" }}
-      >
+      <span className="timeline__value" data-testid="timeline-label">
         {isLive ? "Live" : formatTimestamp(currentValue)}
       </span>
       <button
+        className="timeline__live-btn"
         data-testid="timeline-live"
         onClick={handleLiveClick}
         disabled={isLive}
-        style={{
-          padding: "4px 12px",
-          borderRadius: "4px",
-          border: "1px solid #ccc",
-          backgroundColor: isLive ? "#d4edda" : "#fff",
-          cursor: isLive ? "default" : "pointer",
-          fontWeight: isLive ? "bold" : "normal",
-        }}
       >
         Live
       </button>

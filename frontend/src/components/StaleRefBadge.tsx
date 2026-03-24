@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "urql";
+import "../styles/components/stale-ref-badge.css";
 
 const VALIDATION_ERRORS_QUERY = `
   query ValidationErrors {
@@ -112,26 +113,15 @@ export function StaleRefBadge({ onStaleRefIdsChange }: StaleRefBadgeProps) {
 
   return (
     <div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+      <div className="stale-ref-list">
         {staleRefs.map((ref) => (
           <button
             key={ref.entityId}
             type="button"
+            className="stale-ref-btn"
             data-testid={`stale-ref-${ref.entityId}`}
             onClick={() => handleOpenModal(ref)}
             title={ref.message}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.25rem",
-              padding: "0.25rem 0.5rem",
-              borderRadius: "4px",
-              border: "1px solid #e74c3c",
-              backgroundColor: "#fdf0ef",
-              color: "#c0392b",
-              cursor: "pointer",
-              fontSize: "12px",
-            }}
           >
             <span aria-label="warning">&#9888;</span>
             {ref.entityId.slice(0, 8)}
@@ -140,83 +130,41 @@ export function StaleRefBadge({ onStaleRefIdsChange }: StaleRefBadgeProps) {
       </div>
 
       {modalRef && (
-        <div
-          data-testid="stale-ref-modal"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: "8px",
-              padding: "1.5rem",
-              maxWidth: "480px",
-              width: "100%",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
-            }}
-          >
-            <h3 style={{ margin: "0 0 1rem" }}>Fix Stale Reference</h3>
-            <p style={{ fontSize: "14px", color: "#666" }}>
+        <div className="stale-ref-overlay" data-testid="stale-ref-modal">
+          <div className="stale-ref-modal">
+            <h3>Fix Stale Reference</h3>
+            <p>
               Entity: <code>{modalRef.entityId}</code>
             </p>
-            <p style={{ fontSize: "14px", color: "#666" }}>
+            <p>
               Issue: {modalRef.message}
             </p>
-            <div style={{ margin: "1rem 0" }}>
-              <label htmlFor="new-ref-path" style={{ display: "block", marginBottom: "0.25rem", fontSize: "14px" }}>
+            <div className="stale-ref-modal__field">
+              <label htmlFor="new-ref-path">
                 New file path:
               </label>
               <input
                 id="new-ref-path"
                 type="text"
+                className="stale-ref-modal__input"
                 value={newPath}
                 onChange={(e) => setNewPath(e.target.value)}
                 placeholder="/src/path/to/file.ts"
-                style={{
-                  width: "100%",
-                  padding: "0.5rem",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  boxSizing: "border-box",
-                }}
               />
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+            <div className="stale-ref-modal__actions">
               <button
                 type="button"
+                className="btn-ghost"
                 onClick={handleClose}
-                style={{
-                  padding: "0.5rem 1rem",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  backgroundColor: "#fff",
-                  cursor: "pointer",
-                }}
               >
                 Cancel
               </button>
               <button
                 type="button"
+                className="btn-primary"
                 onClick={handleSubmit}
                 data-testid="stale-ref-submit"
-                style={{
-                  padding: "0.5rem 1rem",
-                  border: "none",
-                  borderRadius: "4px",
-                  backgroundColor: "#2b8a8a",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
               >
                 Update Ref
               </button>

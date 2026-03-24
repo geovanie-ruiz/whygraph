@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import "../styles/components/tag-filter.css";
 
 const ALL_TAGS = [
   "arch",
@@ -41,23 +42,15 @@ export function TagFilter({ onTagsChange }: TagFilterProps) {
   }, [onTagsChange]);
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+    <div className="tag-filter">
       {ALL_TAGS.map((tag) => (
         <button
           key={tag}
           type="button"
+          className="tag-chip"
           role="checkbox"
           aria-checked={selectedTags.has(tag)}
           onClick={() => handleToggleTag(tag)}
-          style={{
-            padding: "0.25rem 0.5rem",
-            borderRadius: "4px",
-            border: "1px solid #ccc",
-            backgroundColor: selectedTags.has(tag) ? "#2b8a8a" : "#fff",
-            color: selectedTags.has(tag) ? "#fff" : "#333",
-            cursor: "pointer",
-            fontSize: "12px",
-          }}
         >
           {tag}
         </button>
@@ -65,15 +58,8 @@ export function TagFilter({ onTagsChange }: TagFilterProps) {
       {selectedTags.size > 0 && (
         <button
           type="button"
+          className="tag-chip--clear"
           onClick={handleClear}
-          style={{
-            padding: "0.25rem 0.5rem",
-            borderRadius: "4px",
-            border: "1px solid #ccc",
-            backgroundColor: "#f0f0f0",
-            cursor: "pointer",
-            fontSize: "12px",
-          }}
         >
           Clear
         </button>

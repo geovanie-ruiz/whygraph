@@ -1,0 +1,85 @@
+/* Design System: "The Technical Monolith"
+   Token definitions — dark mode is default */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  /* Surface hierarchy (dark) */
+  --surface-0: #080F18;
+  --surface-1: #091421;
+  --surface-2: #0B1A2C;
+  --surface-3: #0E2D4D;
+
+  /* For glassmorphism rgba usage */
+  --surface-1-rgb: 9, 20, 33;
+  --surface-2-rgb: 11, 26, 44;
+
+  /* Accent colors */
+  --color-primary: #71D7CD;
+  --color-on-primary: #004944;
+  --color-secondary: #323C4C;
+  --color-tertiary: #FFC87F;
+  --color-error: #EE7D77;
+  --color-success: #4CAF50;
+  --color-surface-tint: #71D7CD;
+
+  /* Text */
+  --text-primary: #E8ECF1;
+  --text-secondary: #8FA3B8;
+  --text-muted: #506070;
+
+  /* Borders & shadows */
+  --border-ghost: rgba(51, 73, 102, 0.2);
+  --shadow-glow: 0 0 40px rgba(113, 215, 205, 0.08);
+
+  /* Typography */
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  --text-xs: 0.6875rem;
+  --text-sm: 0.75rem;
+  --text-base: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+
+  /* Radius — 0px per design system */
+  --radius: 0px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease-in-out;
+}
+
+[data-theme="light"] {
+  --surface-0: #F4F1EA;
+  --surface-1: #FFFFFF;
+  --surface-2: #EDE8E3;
+  --surface-3: #DDD8D3;
+
+  --surface-1-rgb: 255, 255, 255;
+  --surface-2-rgb: 237, 232, 227;
+
+  --color-primary: #71D7CD;
+  --color-on-primary: #004944;
+  --color-secondary: #C8C2BC;
+  --color-tertiary: #E8A54C;
+  --color-error: #D44840;
+  --color-success: #3D8B40;
+  --color-surface-tint: #71D7CD;
+
+  --text-primary: #1A1F26;
+  --text-secondary: #5A6570;
+  --text-muted: #8A9099;
+
+  --border-ghost: rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 40px rgba(113, 215, 205, 0.06);
+}

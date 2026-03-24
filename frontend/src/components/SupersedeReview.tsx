@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "urql";
+import "../styles/components/supersede-review.css";
 
 const SUPERSEDE_CANDIDATES_QUERY = `
   query SupersedeCandidates {
@@ -61,47 +62,28 @@ function CandidatePair({ candidate, onApprove, onDismiss }: CandidatePairProps) 
 
   return (
     <div
+      className="supersede-card"
       data-testid={`candidate-${candidate.newDecisionId}-${candidate.existingDecisionId}`}
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        padding: "1rem",
-        marginBottom: "0.75rem",
-      }}
     >
-      <div style={{ marginBottom: "0.5rem" }}>
+      <div className="supersede-card__row">
         <strong>New:</strong> {newTitle}
       </div>
-      <div style={{ marginBottom: "0.5rem" }}>
+      <div className="supersede-card__row">
         <strong>Existing:</strong> {existingTitle}
       </div>
-      <div style={{ marginBottom: "0.75rem", fontSize: "0.875rem", color: "#666" }}>
+      <div className="supersede-card__shared">
         <strong>Shared nodes:</strong> {candidate.sharedNodeIds.join(", ")}
       </div>
-      <div style={{ display: "flex", gap: "0.5rem" }}>
+      <div className="supersede-card__actions">
         <button
+          className="btn-approve"
           onClick={() => onApprove(candidate)}
-          style={{
-            padding: "0.25rem 0.75rem",
-            backgroundColor: "#28a745",
-            color: "#fff",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
         >
           Approve
         </button>
         <button
+          className="btn-dismiss"
           onClick={() => onDismiss(candidate)}
-          style={{
-            padding: "0.25rem 0.75rem",
-            backgroundColor: "#6c757d",
-            color: "#fff",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
         >
           Dismiss
         </button>
@@ -151,7 +133,7 @@ export function SupersedeReview() {
   }
 
   return (
-    <div data-testid="supersede-review">
+    <div className="supersede-review" data-testid="supersede-review">
       <h3>Supersede Candidates ({visibleCandidates.length})</h3>
       {visibleCandidates.map((c) => (
         <CandidatePair

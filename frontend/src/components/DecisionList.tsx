@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "urql";
+import "../styles/components/decision-list.css";
 
 const DECISIONS_QUERY = `
   query Decisions($status: String, $tags: [String!]) {
@@ -85,21 +86,21 @@ export function DecisionList({ onSelect }: DecisionListProps) {
   const error = isSearching ? searchResult.error : decisionsResult.error;
 
   return (
-    <div data-testid="decision-list">
-      <div style={{ marginBottom: "1rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+    <div className="decision-list" data-testid="decision-list">
+      <div className="decision-list__controls">
         <input
           type="text"
+          className="decision-list__search"
           placeholder="Search decisions..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           aria-label="Search decisions"
-          style={{ padding: "0.5rem", flex: "1 1 200px", minWidth: "200px" }}
         />
         <select
+          className="decision-list__status-select"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           aria-label="Filter by status"
-          style={{ padding: "0.5rem" }}
         >
           <option value="">All statuses</option>
           <option value="active">Active</option>
@@ -107,20 +108,13 @@ export function DecisionList({ onSelect }: DecisionListProps) {
         </select>
       </div>
 
-      <div style={{ marginBottom: "1rem", display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+      <div className="decision-list__tags">
         {ALL_TAGS.map((tag) => (
           <button
             key={tag}
+            className="tag-chip"
             onClick={() => handleTagToggle(tag)}
             aria-pressed={selectedTags.includes(tag)}
-            style={{
-              padding: "0.25rem 0.5rem",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-              backgroundColor: selectedTags.includes(tag) ? "#007bff" : "transparent",
-              color: selectedTags.includes(tag) ? "#fff" : "inherit",
-              cursor: "pointer",
-            }}
           >
             {tag}
           </button>
@@ -136,14 +130,14 @@ export function DecisionList({ onSelect }: DecisionListProps) {
       )}
 
       {!fetching && decisions.length > 0 && (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <table>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "0.5rem", borderBottom: "2px solid #ddd" }}>Title</th>
-              <th style={{ textAlign: "left", padding: "0.5rem", borderBottom: "2px solid #ddd" }}>Status</th>
-              <th style={{ textAlign: "left", padding: "0.5rem", borderBottom: "2px solid #ddd" }}>Date</th>
-              <th style={{ textAlign: "left", padding: "0.5rem", borderBottom: "2px solid #ddd" }}>Tags</th>
-              <th style={{ textAlign: "left", padding: "0.5rem", borderBottom: "2px solid #ddd" }}>Affects</th>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Tags</th>
+              <th>Affects</th>
             </tr>
           </thead>
           <tbody>
@@ -154,11 +148,11 @@ export function DecisionList({ onSelect }: DecisionListProps) {
                 onClick={() => onSelect?.(d)}
                 style={{ cursor: onSelect ? "pointer" : "default" }}
               >
-                <td style={{ padding: "0.5rem", borderBottom: "1px solid #eee" }}>{d.title}</td>
-                <td style={{ padding: "0.5rem", borderBottom: "1px solid #eee" }}>{d.status}</td>
-                <td style={{ padding: "0.5rem", borderBottom: "1px solid #eee" }}>{d.date}</td>
-                <td style={{ padding: "0.5rem", borderBottom: "1px solid #eee" }}>{d.tags.join(", ")}</td>
-                <td style={{ padding: "0.5rem", borderBottom: "1px solid #eee" }}>{d.affects.join(", ")}</td>
+                <td>{d.title}</td>
+                <td>{d.status}</td>
+                <td>{d.date}</td>
+                <td>{d.tags.join(", ")}</td>
+                <td>{d.affects.join(", ")}</td>
               </tr>
             ))}
           </tbody>

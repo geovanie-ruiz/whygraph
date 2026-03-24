@@ -1,0 +1,14 @@
+appName: Whygraph
+environment: claude-code
+prefix: wg-
+idLength: 4
+tags:
+  - arch
+  - data
+  - security
+  - performance
+  - integration
+  - infra
+  - ux
+mpcMode: default
+serverPort: 4777

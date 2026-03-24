@@ -83,9 +83,9 @@ describe("DetailPanel", () => {
       <DetailPanel entity={null} entities={new Map()} onClose={vi.fn()} />,
     );
 
-    // Panel container exists but is translated off-screen
+    // Panel container exists but is closed (data-open="false")
     const panel = getByTestId("detail-panel");
-    expect(panel.style.transform).toBe("translateX(100%)");
+    expect(panel.dataset.open).toBe("false");
     expect(queryByTestId("decision-detail")).toBeNull();
     expect(queryByTestId("structural-detail")).toBeNull();
   });
