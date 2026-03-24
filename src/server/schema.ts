@@ -1,7 +1,17 @@
-import { createSchema } from "graphql-yoga";
+import * as path from "node:path";
+import { createSchema, createPubSub } from "graphql-yoga";
 import type { ServerCore } from "./core.js";
 import { isStructuralNode, isDecisionNode } from "../entity/types.js";
-import type { Entity } from "../entity/types.js";
+import { generateId } from "../entity/id.js";
+import { writeEntity } from "../entity/writer.js";
+import type {
+  Entity,
+  StructuralNode,
+  DecisionNode,
+  StructuralLabel,
+  DecisionTag,
+  SymbolRef,
+} from "../entity/types.js";
 
 const typeDefs = /* GraphQL */ `
   type StructuralNode {
@@ -40,6 +50,11 @@ const typeDefs = /* GraphQL */ `
     symbol: String
   }
 
+  input SymbolRefInput {
+    file: String!
+    symbol: String
+  }
+
   union Entity = StructuralNode | DecisionNode
 
   type Query {
@@ -57,10 +72,110 @@ const typeDefs = /* GraphQL */ `
 
   type Mutation {
     ping: Boolean!
+    createNode(
+      label: String!
+      name: String!
+      parent: String
+      refs: [SymbolRefInput!]
+      description: String
+    ): StructuralNode!
+    createDecision(
+      title: String!
+      date: String!
+      affects: [String!]!
+      tags: [String!]!
+      context: String!
+      decision: String!
+      tradeoffs: String!
+      alternatives: String!
+      supersedes: String
+    ): DecisionNode!
+    updateEntity(
+      id: ID!
+      status: String
+      removed_at: String
+      refs: [SymbolRefInput!]
+    ): Entity!
+  }
+
+  enum EntityChangeType {
+    CREATED
+    UPDATED
+    DELETED
+    INITIAL_SNAPSHOT
+  }
+
+  type EntityChangeEvent {
+    type: EntityChangeType!
+    entities: [Entity!]
+    entity: Entity
+    entityId: String
+  }
+
+  type Subscription {
+    entityChanged(includeInitial: Boolean): EntityChangeEvent!
   }
 `;
 
+interface CreateNodeArgs {
+  label: string;
+  name: string;
+  parent?: string;
+  refs?: SymbolRef[];
+  description?: string;
+}
+
+interface CreateDecisionArgs {
+  title: string;
+  date: string;
+  affects: string[];
+  tags: string[];
+  context: string;
+  decision: string;
+  tradeoffs: string;
+  alternatives: string;
+  supersedes?: string;
+}
+
+interface UpdateEntityArgs {
+  id: string;
+  status?: string;
+  removed_at?: string;
+  refs?: SymbolRef[];
+}
+
+interface EntityChangeEvent {
+  type: "CREATED" | "UPDATED" | "DELETED" | "INITIAL_SNAPSHOT";
+  entities?: Entity[];
+  entity?: Entity;
+  entityId?: string;
+}
+
 export function buildSchema(core: ServerCore) {
+  const yogaPubSub = createPubSub<{ entityChanged: [EntityChangeEvent] }>();
+
+  // Wire ServerCore's PubSub to Yoga's PubSub for subscriptions
+  core.pubsub.subscribe((event) => {
+    if (event.type === "entity_created") {
+      yogaPubSub.publish("entityChanged", {
+        type: "CREATED",
+        entity: event.entity,
+        entityId: event.entityId,
+      });
+    } else if (event.type === "entity_updated") {
+      yogaPubSub.publish("entityChanged", {
+        type: "UPDATED",
+        entity: event.entity,
+        entityId: event.entityId,
+      });
+    } else if (event.type === "entity_deleted") {
+      yogaPubSub.publish("entityChanged", {
+        type: "DELETED",
+        entityId: event.entityId,
+      });
+    }
+  });
+
   return createSchema({
     typeDefs,
     resolvers: {
@@ -87,6 +202,121 @@ export function buildSchema(core: ServerCore) {
       },
       Mutation: {
         ping: () => true,
+
+        createNode: (_: unknown, args: CreateNodeArgs) => {
+          const now = new Date().toISOString();
+          const id = generateId();
+          const graphDir = path.join(core.getWhygraphDir(), "graph");
+
+          const node: StructuralNode = {
+            id,
+            label: args.label as StructuralLabel,
+            name: args.name,
+            status: "active",
+            created_at: now,
+            updated_at: now,
+          };
+
+          if (args.parent !== undefined) node.parent = args.parent;
+          if (args.refs !== undefined) node.refs = args.refs;
+          if (args.description !== undefined) node.description = args.description;
+
+          writeEntity(graphDir, node);
+          core.addOrUpdateEntity(id, node);
+
+          return node;
+        },
+
+        createDecision: (_: unknown, args: CreateDecisionArgs) => {
+          const now = new Date().toISOString();
+          const id = generateId();
+          const graphDir = path.join(core.getWhygraphDir(), "graph");
+
+          const decision: DecisionNode = {
+            id,
+            label: "Decision",
+            title: args.title,
+            status: "active",
+            date: args.date,
+            affects: args.affects,
+            tags: args.tags as DecisionTag[],
+            context: args.context,
+            decision: args.decision,
+            tradeoffs: args.tradeoffs,
+            alternatives: args.alternatives,
+            created_at: now,
+            updated_at: now,
+          };
+
+          if (args.supersedes !== undefined) decision.supersedes = args.supersedes;
+
+          writeEntity(graphDir, decision);
+          core.addOrUpdateEntity(id, decision);
+
+          return decision;
+        },
+
+        updateEntity: (_: unknown, args: UpdateEntityArgs) => {
+          const existing = core.getEntity(args.id);
+          if (!existing) {
+            throw new Error(`Entity not found: ${args.id}`);
+          }
+
+          const now = new Date().toISOString();
+          const graphDir = path.join(core.getWhygraphDir(), "graph");
+
+          const updated = { ...existing, updated_at: now };
+
+          if (args.status !== undefined) {
+            (updated as Record<string, unknown>).status = args.status;
+          }
+          if (args.removed_at !== undefined) {
+            updated.removed_at = args.removed_at;
+          }
+          if (args.refs !== undefined && isStructuralNode(updated)) {
+            updated.refs = args.refs;
+          }
+
+          writeEntity(graphDir, updated);
+          core.addOrUpdateEntity(args.id, updated);
+
+          return updated;
+        },
+      },
+      Subscription: {
+        entityChanged: {
+          subscribe: (_: unknown, args: { includeInitial?: boolean }) => {
+            const baseIterator = yogaPubSub.subscribe("entityChanged");
+
+            if (!args.includeInitial) {
+              return baseIterator;
+            }
+
+            // Wrap with initial snapshot
+            async function* withInitialSnapshot() {
+              const allEntities = core.getAllEntities();
+              yield {
+                entityChanged: {
+                  type: "INITIAL_SNAPSHOT" as const,
+                  entities: allEntities,
+                },
+              };
+
+              for await (const event of baseIterator) {
+                yield event;
+              }
+            }
+
+            return withInitialSnapshot();
+          },
+          resolve: (event: { entityChanged: EntityChangeEvent } | EntityChangeEvent) => {
+            // Events from yogaPubSub come wrapped, initial snapshot comes unwrapped
+            if ("entityChanged" in event) {
+              return event.entityChanged;
+            }
+            return event;
+          },
+        },
       },
     },
   });

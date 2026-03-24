@@ -3,6 +3,7 @@ import * as path from "node:path";
 import graphology from "graphology";
 import { parseEntity } from "../entity/parser.js";
 import { buildGraph } from "../graph/projection.js";
+import { PubSub } from "./pubsub.js";
 import type { Entity } from "../entity/types.js";
 
 type MultiDirectedGraph = graphology.MultiDirectedGraph;
@@ -12,11 +13,17 @@ export class ServerCore {
   private entityMap: Map<string, Entity>;
   private graph: MultiDirectedGraph;
   private readonly whygraphDir: string;
+  readonly pubsub: PubSub;
 
   constructor(whygraphDir: string) {
     this.whygraphDir = whygraphDir;
     this.entityMap = new Map();
     this.graph = new MultiDirectedGraph();
+    this.pubsub = new PubSub();
+  }
+
+  getWhygraphDir(): string {
+    return this.whygraphDir;
   }
 
   async load(): Promise<void> {
@@ -67,13 +74,26 @@ export class ServerCore {
   }
 
   addOrUpdateEntity(id: string, entity: Entity): void {
+    const isUpdate = this.entityMap.has(id);
     this.entityMap.set(id, entity);
     this.rebuildGraph();
+    this.pubsub.publish({
+      type: isUpdate ? "entity_updated" : "entity_created",
+      entityId: id,
+      entity,
+    });
   }
 
   removeEntity(id: string): void {
+    const existed = this.entityMap.has(id);
     this.entityMap.delete(id);
     this.rebuildGraph();
+    if (existed) {
+      this.pubsub.publish({
+        type: "entity_deleted",
+        entityId: id,
+      });
+    }
   }
 
   private rebuildGraph(): void {
