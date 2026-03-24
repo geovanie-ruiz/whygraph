@@ -18,6 +18,7 @@ interface GraphNode extends d3.SimulationNodeDatum {
 }
 
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
+  id: string;
   type: "COMPOSES" | "AFFECTS" | "SUPERSEDES";
 }
 
@@ -94,6 +95,7 @@ function buildGraph(entities: Map<string, Entity>): {
 
     if (isStructural(entity) && entity.parent && idSet.has(entity.parent)) {
       links.push({
+        id: `${entity.parent}-COMPOSES-${entity.id}`,
         source: entity.parent,
         target: entity.id,
         type: "COMPOSES",
@@ -104,6 +106,7 @@ function buildGraph(entities: Map<string, Entity>): {
       for (const affectedId of entity.affects) {
         if (idSet.has(affectedId)) {
           links.push({
+            id: `${entity.id}-AFFECTS-${affectedId}`,
             source: entity.id,
             target: affectedId,
             type: "AFFECTS",
@@ -112,6 +115,7 @@ function buildGraph(entities: Map<string, Entity>): {
       }
       if (entity.supersedes && idSet.has(entity.supersedes)) {
         links.push({
+          id: `${entity.id}-SUPERSEDES-${entity.supersedes}`,
           source: entity.id,
           target: entity.supersedes,
           type: "SUPERSEDES",
@@ -123,11 +127,15 @@ function buildGraph(entities: Map<string, Entity>): {
   return { nodes, links };
 }
 
+const TRANSITION_DURATION = 300;
+
 export function GraphView({ entities, onSelect }: GraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(
     null,
   );
+  const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const initializedRef = useRef(false);
 
   const handleNodeClick = useCallback(
     (_event: MouseEvent, d: GraphNode) => {
@@ -145,25 +153,55 @@ export function GraphView({ entities, onSelect }: GraphViewProps) {
 
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
-    // Clear previous content
-    svg.selectAll("*").remove();
-
     const { nodes, links } = buildGraph(entities);
 
-    if (nodes.length === 0) return;
+    // First-time initialization: create container group, zoom
+    if (!initializedRef.current) {
+      svg.selectAll("*").remove();
+      const g = svg.append("g");
+      gRef.current = g;
+      g.append("g").attr("class", "links");
+      g.append("g").attr("class", "nodes");
 
-    // Container group for zoom/pan
-    const g = svg.append("g");
+      const zoom = d3
+        .zoom<SVGSVGElement, unknown>()
+        .scaleExtent([0.1, 4])
+        .on("zoom", (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+          g.attr("transform", event.transform.toString());
+        });
 
-    // Zoom behavior
-    const zoom = d3
-      .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 4])
-      .on("zoom", (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
-        g.attr("transform", event.transform.toString());
-      });
+      svg.call(zoom as unknown as (selection: d3.Selection<SVGSVGElement | null, unknown, null, undefined>) => void);
+      initializedRef.current = true;
+    }
 
-    svg.call(zoom as unknown as (selection: d3.Selection<SVGSVGElement | null, unknown, null, undefined>) => void);
+    const g = gRef.current!;
+
+    // Stop previous simulation
+    if (simulationRef.current) {
+      simulationRef.current.stop();
+    }
+
+    if (nodes.length === 0) {
+      g.select(".links").selectAll("line").remove();
+      g.select(".nodes").selectAll("g").remove();
+      return;
+    }
+
+    // Preserve positions from previous simulation nodes
+    const prevNodes = simulationRef.current?.nodes() ?? [];
+    const prevPositions = new Map<string, { x: number; y: number }>();
+    for (const n of prevNodes) {
+      if (n.x !== undefined && n.y !== undefined) {
+        prevPositions.set(n.id, { x: n.x, y: n.y });
+      }
+    }
+    for (const n of nodes) {
+      const prev = prevPositions.get(n.id);
+      if (prev) {
+        n.x = prev.x;
+        n.y = prev.y;
+      }
+    }
 
     // Force simulation
     const simulation = d3
@@ -180,32 +218,60 @@ export function GraphView({ entities, onSelect }: GraphViewProps) {
 
     simulationRef.current = simulation;
 
-    // Draw links
-    const link = g
-      .append("g")
-      .attr("class", "links")
-      .selectAll("line")
-      .data(links)
-      .join("line")
+    // Update links with enter/exit transitions
+    const linkSelection = g
+      .select(".links")
+      .selectAll<SVGLineElement, GraphLink>("line")
+      .data(links, (d) => d.id);
+
+    linkSelection.exit()
+      .transition()
+      .duration(TRANSITION_DURATION)
+      .attr("stroke-opacity", 0)
+      .remove();
+
+    const linkEnter = linkSelection.enter()
+      .append("line")
       .attr("stroke-width", 1.5)
+      .attr("stroke", (d) => linkStroke(d.type).color)
+      .attr("stroke-dasharray", (d) => linkStroke(d.type).dash)
+      .attr("stroke-opacity", 0);
+
+    linkEnter.transition()
+      .duration(TRANSITION_DURATION)
+      .attr("stroke-opacity", 1);
+
+    const link = linkEnter.merge(linkSelection);
+
+    // Update existing links
+    linkSelection
       .attr("stroke", (d) => linkStroke(d.type).color)
       .attr("stroke-dasharray", (d) => linkStroke(d.type).dash);
 
-    // Draw node groups
-    const node = g
-      .append("g")
-      .attr("class", "nodes")
+    // Update nodes with enter/exit transitions
+    const nodeSelection = g
+      .select(".nodes")
       .selectAll<SVGGElement, GraphNode>("g")
-      .data(nodes)
-      .join("g")
+      .data(nodes, (d) => d.id);
+
+    // Exit: fade out and remove
+    nodeSelection.exit()
+      .transition()
+      .duration(TRANSITION_DURATION)
+      .attr("opacity", 0)
+      .remove();
+
+    // Enter: create new node groups
+    const nodeEnter = nodeSelection.enter()
+      .append("g")
       .attr("cursor", "pointer")
+      .attr("opacity", 0)
       .on("click", handleNodeClick as unknown as (this: SVGGElement, event: MouseEvent, d: GraphNode) => void);
 
-    // Node shapes
-    node.each(function (d) {
+    // Add shapes to new nodes
+    nodeEnter.each(function (d) {
       const el = d3.select(this);
       if (d.label === "Decision") {
-        // Diamond shape for decisions
         const r = nodeRadius(d.label);
         el.append("rect")
           .attr("width", r * 1.4)
@@ -225,8 +291,8 @@ export function GraphView({ entities, onSelect }: GraphViewProps) {
       }
     });
 
-    // Node labels
-    node
+    // Add labels to new nodes
+    nodeEnter
       .append("text")
       .text((d) => d.displayName)
       .attr("dy", (d) => nodeRadius(d.label) + 14)
@@ -234,6 +300,25 @@ export function GraphView({ entities, onSelect }: GraphViewProps) {
       .attr("font-size", "11px")
       .attr("fill", "#333")
       .attr("pointer-events", "none");
+
+    // Fade in new nodes
+    nodeEnter.transition()
+      .duration(TRANSITION_DURATION)
+      .attr("opacity", 1);
+
+    // Merge enter + update
+    const node = nodeEnter.merge(nodeSelection);
+
+    // Update existing node labels/colors for UPDATED events
+    nodeSelection.each(function (d) {
+      const el = d3.select(this);
+      el.select("text").text(d.displayName);
+      el.select("circle").attr("fill", nodeColor(d.label));
+      el.select("rect").attr("fill", nodeColor(d.label));
+    });
+
+    // Re-attach click handler to merged selection
+    node.on("click", handleNodeClick as unknown as (this: SVGGElement, event: MouseEvent, d: GraphNode) => void);
 
     // Drag behavior
     const drag = d3
@@ -266,6 +351,9 @@ export function GraphView({ entities, onSelect }: GraphViewProps) {
       node.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
     });
 
+    // Reheat simulation gently for incremental updates
+    simulation.alpha(0.3).restart();
+
     return () => {
       simulation.stop();
     };
@@ -274,6 +362,7 @@ export function GraphView({ entities, onSelect }: GraphViewProps) {
   return (
     <svg
       ref={svgRef as React.RefObject<SVGSVGElement>}
+      data-testid="graph-view"
       style={{ width: "100%", height: "600px", border: "1px solid #ddd", borderRadius: "8px" }}
     />
   );
