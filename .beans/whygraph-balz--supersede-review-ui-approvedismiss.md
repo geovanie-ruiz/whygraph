@@ -1,14 +1,14 @@
 ---
 # whygraph-balz
 title: 'Supersede review UI: approve/dismiss'
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
     - afk
     - frontend
 created_at: 2026-03-24T05:35:24Z
-updated_at: 2026-03-24T05:35:24Z
+updated_at: 2026-03-24T06:45:49Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-hy0d

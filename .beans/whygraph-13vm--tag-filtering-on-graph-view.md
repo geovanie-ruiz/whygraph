@@ -1,14 +1,14 @@
 ---
 # whygraph-13vm
 title: Tag filtering on graph view
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
     - afk
     - frontend
 created_at: 2026-03-24T05:35:24Z
-updated_at: 2026-03-24T05:35:24Z
+updated_at: 2026-03-24T06:53:16Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-tupg
