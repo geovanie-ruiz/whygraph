@@ -1,7 +1,10 @@
 import { createServer, type Server } from "node:http";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { WebSocketServer } from "ws";
+import { useServer } from "graphql-ws/use/ws";
 import { createYoga } from "graphql-yoga";
+import { execute, subscribe } from "graphql";
 import { buildSchema } from "./schema.js";
 import type { ServerCore } from "./core.js";
 
@@ -133,6 +136,17 @@ export function createHttpServer(
     yoga(req, res);
   });
 
+  // WebSocket server for graphql-ws subscriptions
+  const wss = new WebSocketServer({ server, path: "/api/graphql" });
+  const wsCleanup = useServer(
+    {
+      schema,
+      execute: execute as never,
+      subscribe: subscribe as never,
+    },
+    wss,
+  );
+
   return {
     server,
     start(): Promise<void> {
@@ -143,6 +157,8 @@ export function createHttpServer(
     },
     stop(): Promise<void> {
       return new Promise((resolve) => {
+        wsCleanup.dispose();
+        wss.close();
         server.close(() => resolve());
       });
     },
