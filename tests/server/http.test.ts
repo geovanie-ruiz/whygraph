@@ -109,3 +109,76 @@ describe("HTTP server", () => {
     });
   });
 });
+
+describe("HTTP server static file serving", () => {
+  let httpServer: HttpServer;
+  let baseUrl: string;
+  let core: ServerCore;
+  let frontendDir: string;
+
+  beforeEach(async () => {
+    const whygraphDir = await makeTempDir();
+    const graphDir = path.join(whygraphDir, "graph");
+    await fs.mkdir(graphDir, { recursive: true });
+    await fs.writeFile(path.join(graphDir, "wg-feat1.md"), structuralMd("wg-feat1"));
+
+    // Create a minimal frontend directory
+    frontendDir = await makeTempDir();
+    await fs.writeFile(
+      path.join(frontendDir, "index.html"),
+      "<!DOCTYPE html><html><body>whygraph app</body></html>",
+    );
+    await fs.mkdir(path.join(frontendDir, "assets"), { recursive: true });
+    await fs.writeFile(
+      path.join(frontendDir, "assets", "main.js"),
+      "console.log('hello');",
+    );
+
+    core = new ServerCore(whygraphDir);
+    await core.load();
+    httpServer = createHttpServer(core, { port: 0, frontendDir });
+
+    await new Promise<void>((resolve) => {
+      httpServer.server.listen(0, () => resolve());
+    });
+
+    const addr = httpServer.server.address();
+    if (addr && typeof addr === "object") {
+      baseUrl = `http://localhost:${addr.port}`;
+    }
+  });
+
+  afterEach(async () => {
+    await httpServer.stop();
+  });
+
+  it("serves index.html for root path", async () => {
+    const res = await fetch(`${baseUrl}/`);
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("whygraph app");
+    expect(res.headers.get("content-type")).toBe("text/html");
+  });
+
+  it("serves index.html as SPA fallback for unknown paths", async () => {
+    const res = await fetch(`${baseUrl}/decisions/some-id`);
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("whygraph app");
+  });
+
+  it("serves static assets directly", async () => {
+    const res = await fetch(`${baseUrl}/assets/main.js`);
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toBe("console.log('hello');");
+    expect(res.headers.get("content-type")).toBe("application/javascript");
+  });
+
+  it("API routes still work with frontend present", async () => {
+    const res = await fetch(`${baseUrl}/api/health`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ status: "ok" });
+  });
+});

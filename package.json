@@ -8,6 +8,8 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:frontend": "cd frontend && npm run build",
+    "build:all": "npm run build && npm run build:frontend",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
