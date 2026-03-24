@@ -1,14 +1,15 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Provider } from "urql";
-import { urqlClient } from "./lib/graphql";
+import { urqlClient } from "./lib/graphql.js";
 import {
   type Entity,
   type EntityChangeEvent,
   applyEvent,
   ENTITY_CHANGED_SUBSCRIPTION,
   EntityStoreContext,
-} from "./lib/store";
-import { wsClient } from "./lib/graphql";
+} from "./lib/store.js";
+import { wsClient } from "./lib/graphql.js";
+import { GraphView } from "./components/GraphView.js";
 
 function EntityDashboard() {
   const [entities, setEntities] = useState<Map<string, Entity>>(new Map());
@@ -42,6 +43,10 @@ function EntityDashboard() {
     return () => {
       unsubscribe();
     };
+  }, []);
+
+  const handleSelect = useCallback((entityId: string) => {
+    console.log("Selected entity:", entityId);
   }, []);
 
   const storeValue = useMemo(
@@ -83,17 +88,8 @@ function EntityDashboard() {
             <strong>Decisions:</strong> {decisionCount}
           </p>
         </div>
-        <div
-          style={{
-            marginTop: "2rem",
-            padding: "2rem",
-            border: "1px dashed #ccc",
-            borderRadius: "8px",
-            textAlign: "center",
-            color: "#666",
-          }}
-        >
-          Graph view coming soon
+        <div style={{ marginTop: "2rem" }}>
+          <GraphView entities={entities} onSelect={handleSelect} />
         </div>
       </div>
     </EntityStoreContext.Provider>
