@@ -8,9 +8,9 @@ describe("App", () => {
     expect(screen.getByText("whygraph")).toBeDefined();
   });
 
-  it("shows graph placeholder", () => {
-    render(<App />);
-    expect(screen.getByText("Graph view coming soon")).toBeDefined();
+  it("renders graph view SVG", () => {
+    const { container } = render(<App />);
+    expect(container.querySelector("svg")).not.toBeNull();
   });
 
   it("shows entity count", () => {
