@@ -8,7 +8,7 @@ tags:
     - afk
     - mcp
 created_at: 2026-03-24T05:35:23Z
-updated_at: 2026-03-24T06:32:31Z
+updated_at: 2026-03-24T06:33:05Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-lzmh

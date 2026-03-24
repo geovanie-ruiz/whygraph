@@ -1,14 +1,14 @@
 ---
 # whygraph-v3mi
 title: 'GraphQL mutations: create node, create decision, update'
-status: in-progress
+status: completed
 type: task
 priority: high
 tags:
     - afk
     - server
 created_at: 2026-03-24T05:34:27Z
-updated_at: 2026-03-24T06:23:31Z
+updated_at: 2026-03-24T06:33:05Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-addb
