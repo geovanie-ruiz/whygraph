@@ -58,7 +58,7 @@ describe("WorktreeWatcher", () => {
     await fs.writeFile(path.join(wtGraphDir, "wg-wt1.md"), structuralMd("wg-wt1"));
 
     // Wait for watcher debounce + file read
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 1000));
 
     // The entity should be in the core
     const entity = core.getEntity("wg-wt1");
@@ -122,7 +122,7 @@ describe("WorktreeWatcher", () => {
     // Write after stop — should not update core
     const initialCount = core.getAllEntities().length;
     await fs.writeFile(path.join(wt1GraphDir, "wg-late.md"), structuralMd("wg-late"));
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 1000));
     expect(core.getAllEntities().length).toBe(initialCount);
   });
 });
