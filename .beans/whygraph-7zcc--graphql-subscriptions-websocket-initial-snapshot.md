@@ -1,14 +1,14 @@
 ---
 # whygraph-7zcc
 title: 'GraphQL subscriptions: WebSocket + INITIAL_SNAPSHOT'
-status: todo
+status: in-progress
 type: task
 priority: high
 tags:
     - afk
     - server
 created_at: 2026-03-24T05:34:27Z
-updated_at: 2026-03-24T05:34:27Z
+updated_at: 2026-03-24T06:23:31Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-skxk
