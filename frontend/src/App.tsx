@@ -11,6 +11,7 @@ import {
 } from "./lib/store.js";
 import { wsClient } from "./lib/graphql.js";
 import { GraphView } from "./components/GraphView.js";
+import { DetailPanel } from "./components/DetailPanel.js";
 import { GapHighlight } from "./components/GapHighlight.js";
 import { TagFilter } from "./components/TagFilter.js";
 import type { DecisionTag } from "./components/TagFilter.js";
@@ -22,6 +23,7 @@ function EntityDashboard() {
   const [gapIds, setGapIds] = useState<Set<string>>(new Set());
   const [selectedTags, setSelectedTags] = useState<Set<DecisionTag>>(new Set());
   const [staleRefIds, setStaleRefIds] = useState<Set<string>>(new Set());
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = wsClient.subscribe<{
@@ -54,8 +56,10 @@ function EntityDashboard() {
   }, []);
 
   const handleSelect = useCallback((entityId: string) => {
-    console.log("Selected entity:", entityId);
+    setSelectedEntityId((prev) => (prev === entityId ? null : entityId));
   }, []);
+
+  const selectedEntity = selectedEntityId ? entities.get(selectedEntityId) ?? null : null;
 
   const storeValue = useMemo(
     () => ({ entities, connected }),
@@ -146,12 +150,17 @@ function EntityDashboard() {
         <div style={{ marginTop: "0.75rem" }}>
           <TagFilter onTagsChange={setSelectedTags} />
         </div>
-        <div style={{ marginTop: "2rem" }}>
+        <div style={{ marginTop: "2rem", position: "relative" }}>
           <GraphView
             entities={filteredEntities}
             onSelect={handleSelect}
             highlightedIds={gapIds}
             staleRefIds={staleRefIds}
+          />
+          <DetailPanel
+            entity={selectedEntity}
+            entities={entities}
+            onClose={() => setSelectedEntityId(null)}
           />
         </div>
       </div>

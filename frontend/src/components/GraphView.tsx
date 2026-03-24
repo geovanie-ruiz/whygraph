@@ -175,10 +175,11 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         d3
           .forceLink<GraphNode, GraphLink>(links)
           .id((d) => d.id)
-          .distance(100),
+          .distance(180),
       )
-      .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(width / 2, height / 2));
+      .force("charge", d3.forceManyBody().strength(-800))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collide", d3.forceCollide().radius(40));
 
     simulationRef.current = simulation;
 
@@ -276,15 +277,18 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
       .attr("fill", "#333")
       .attr("pointer-events", "none");
 
-    // Drag behavior
+    // Drag behavior — track whether drag actually moved to distinguish from click
+    let dragged = false;
     const drag = d3
       .drag<SVGGElement, GraphNode>()
       .on("start", (_event: d3.D3DragEvent<SVGGElement, GraphNode, GraphNode>, d: GraphNode) => {
+        dragged = false;
         if (!_event.active) simulation.alphaTarget(0.3).restart();
         d.fx = d.x;
         d.fy = d.y;
       })
       .on("drag", (event: d3.D3DragEvent<SVGGElement, GraphNode, GraphNode>, d: GraphNode) => {
+        dragged = true;
         d.fx = event.x;
         d.fy = event.y;
       })
@@ -292,6 +296,10 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         if (!_event.active) simulation.alphaTarget(0);
         d.fx = null;
         d.fy = null;
+        // Fire click only if the node wasn't actually dragged
+        if (!dragged) {
+          onSelect(d.id);
+        }
       });
 
     node.call(drag);
