@@ -174,7 +174,99 @@ export function createMcpServer(): McpServer {
     }
   });
 
+  // Write tools — only registered in strict mode
+  if (process.env["WHYGRAPH_MPC_MODE"] === "strict") {
+    registerWriteTools(server);
+  }
+
   return server;
+}
+
+function registerWriteTools(server: McpServer): void {
+  // whygraph_create_decision
+  server.registerTool("whygraph_create_decision", {
+    description: "Create a new decision node in the whygraph.",
+    inputSchema: {
+      title: z.string().min(1).describe("Decision title"),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("Decision date (YYYY-MM-DD)"),
+      affects: z.array(z.string().min(1)).min(1).describe("IDs of structural nodes this decision affects"),
+      tags: z.array(z.string()).min(1).describe("Decision tags (arch, data, security, performance, integration, infra, ux)"),
+      context: z.string().min(1).describe("Context explaining why this decision was needed"),
+      decision: z.string().min(1).describe("The decision that was made"),
+      tradeoffs: z.string().min(1).describe("Tradeoffs of the decision"),
+      alternatives: z.string().min(1).describe("Alternatives that were considered"),
+      supersedes: z.string().optional().describe("ID of the decision this supersedes"),
+    },
+  }, async ({ title, date, affects, tags, context, decision, tradeoffs, alternatives, supersedes }) => {
+    try {
+      const variables: Record<string, unknown> = {
+        title, date, affects, tags, context, decision, tradeoffs, alternatives,
+      };
+      if (supersedes !== undefined) variables["supersedes"] = supersedes;
+
+      const query = `
+        mutation CreateDecision(
+          $title: String!, $date: String!, $affects: [String!]!, $tags: [String!]!,
+          $context: String!, $decision: String!, $tradeoffs: String!, $alternatives: String!,
+          $supersedes: String
+        ) {
+          createDecision(
+            title: $title, date: $date, affects: $affects, tags: $tags,
+            context: $context, decision: $decision, tradeoffs: $tradeoffs,
+            alternatives: $alternatives, supersedes: $supersedes
+          ) {
+            id title status date affects tags context decision tradeoffs alternatives supersedes
+            created_at updated_at
+          }
+        }
+      `;
+      const data = await queryGraphQL<{ createDecision: unknown }>(query, variables);
+      return textResult(data.createDecision);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  });
+
+  // whygraph_create_node
+  server.registerTool("whygraph_create_node", {
+    description: "Create a new structural node in the whygraph.",
+    inputSchema: {
+      label: z.string().min(1).describe("Node label (App, Feature, Component)"),
+      name: z.string().min(1).describe("Node name"),
+      parent: z.string().optional().describe("Parent node ID"),
+      refs: z.array(z.object({
+        file: z.string(),
+        symbol: z.string().optional(),
+      })).optional().describe("Code references"),
+      description: z.string().optional().describe("Node description"),
+    },
+  }, async ({ label, name, parent, refs, description }) => {
+    try {
+      const variables: Record<string, unknown> = { label, name };
+      if (parent !== undefined) variables["parent"] = parent;
+      if (refs !== undefined) variables["refs"] = refs;
+      if (description !== undefined) variables["description"] = description;
+
+      const query = `
+        mutation CreateNode(
+          $label: String!, $name: String!, $parent: String,
+          $refs: [SymbolRefInput!], $description: String
+        ) {
+          createNode(
+            label: $label, name: $name, parent: $parent,
+            refs: $refs, description: $description
+          ) {
+            id label name status parent refs { file symbol } description
+            created_at updated_at
+          }
+        }
+      `;
+      const data = await queryGraphQL<{ createNode: unknown }>(query, variables);
+      return textResult(data.createNode);
+    } catch (err) {
+      return errorResult((err as Error).message);
+    }
+  });
 }
 
 export async function startMcpServer(): Promise<void> {

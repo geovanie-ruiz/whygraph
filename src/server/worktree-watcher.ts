@@ -4,6 +4,7 @@ import { FileWatcher, type WatcherEvent } from "./watcher.js";
 import { ServerCore } from "./core.js";
 import { detectWorktrees, type DetectDeps, type WorktreeInfo } from "./worktree.js";
 import { parseEntity } from "../entity/parser.js";
+import { computeETag } from "./etag.js";
 
 export interface WorktreeWatcherDeps {
   detectWorktrees: (repoDir: string, deps?: DetectDeps) => Promise<WorktreeInfo[]>;
@@ -14,6 +15,7 @@ export class WorktreeWatcher {
   private readonly repoDir: string;
   private readonly watchers: Map<string, FileWatcher> = new Map();
   private readonly worktreeEntities: Set<string> = new Set();
+  private readonly dirtyEntities: Set<string> = new Set();
   private readonly deps: WorktreeWatcherDeps;
 
   constructor(core: ServerCore, repoDir: string, deps?: WorktreeWatcherDeps) {
@@ -49,10 +51,15 @@ export class WorktreeWatcher {
     return this.worktreeEntities.has(id);
   }
 
+  getDirtyIds(): string[] {
+    return Array.from(this.dirtyEntities);
+  }
+
   private handleEvents(events: WatcherEvent[], wt: WorktreeInfo): void {
     for (const event of events) {
       if (event.type === "deleted" && event.entityId) {
         this.worktreeEntities.delete(event.entityId);
+        this.dirtyEntities.delete(event.entityId);
         this.core.removeEntity(event.entityId);
       } else if (event.entityId) {
         this.worktreeEntities.add(event.entityId);
@@ -61,6 +68,14 @@ export class WorktreeWatcher {
           .then((content) => {
             const entity = parseEntity(content);
             if (entity) {
+              // Track dirty state via ETag comparison with main entity
+              const mainEntity = this.core.getEntity(entity.id);
+              if (mainEntity && computeETag(entity) === computeETag(mainEntity)) {
+                this.dirtyEntities.delete(entity.id);
+              } else {
+                this.dirtyEntities.add(entity.id);
+              }
+
               // Mark entity as coming from a worktree
               const tagged = { ...entity, _worktree: wt.path };
               this.core.addOrUpdateEntity(entity.id, tagged);
