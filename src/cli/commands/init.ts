@@ -11,6 +11,8 @@ import type {
   StructuralNode,
 } from "../../entity/types.js";
 import { DECISION_TAGS } from "../../entity/types.js";
+import { runPrime } from "./prime.js";
+import { writePlatformRules } from "../../platform/rules.js";
 
 // ============================================================
 // Types
@@ -26,6 +28,7 @@ export interface InitResult {
   configPath: string;
   appNodePath: string;
   appId: string;
+  platformRulesPath: string;
 }
 
 // ============================================================
@@ -124,7 +127,11 @@ export async function runInit(
 
   const appNodePath = writeEntity(graphDir, appNode);
 
-  return { configPath, appNodePath, appId };
+  // Write platform-specific rules
+  const primeOutput = runPrime(targetDir);
+  const platformResult = writePlatformRules(targetDir, environment, primeOutput);
+
+  return { configPath, appNodePath, appId, platformRulesPath: platformResult.filePath };
 }
 
 // ============================================================
