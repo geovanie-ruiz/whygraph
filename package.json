@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "graphology": "^0.25.0",
+    "gray-matter": "^4.0.3",
     "nanoid": "^5.1.7"
   },
   "devDependencies": {
