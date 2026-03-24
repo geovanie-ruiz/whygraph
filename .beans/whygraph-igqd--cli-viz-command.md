@@ -1,14 +1,14 @@
 ---
 # whygraph-igqd
 title: CLI viz command
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
     - afk
     - cli
 created_at: 2026-03-24T05:33:40Z
-updated_at: 2026-03-24T05:34:27Z
+updated_at: 2026-03-24T06:39:15Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-sauw

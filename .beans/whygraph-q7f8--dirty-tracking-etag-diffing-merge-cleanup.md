@@ -1,14 +1,14 @@
 ---
 # whygraph-q7f8
 title: 'Dirty tracking: ETag diffing + merge cleanup'
-status: todo
+status: completed
 type: task
 priority: high
 tags:
     - afk
     - server
 created_at: 2026-03-24T05:36:00Z
-updated_at: 2026-03-24T05:36:00Z
+updated_at: 2026-03-24T06:39:15Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-zqju

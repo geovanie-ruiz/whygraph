@@ -1,14 +1,14 @@
 ---
 # whygraph-1gw2
 title: 'MCP server: write tools (strict mode)'
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
     - afk
     - mcp
 created_at: 2026-03-24T05:35:23Z
-updated_at: 2026-03-24T05:35:24Z
+updated_at: 2026-03-24T06:39:15Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-v3mi
