@@ -1,7 +1,0 @@
-staging/
-sessions.json
-errors.jsonl
-reviews.jsonl
-.lock
-.sessions-lock
-uuid-map.json

@@ -1,14 +1,7 @@
 # Decision Recognition Standard
 
-This document serves two purposes:
-
-1. **For this build**: defines the standard for bead staging entries
-2. **For whygraph itself**: the core of what ships in agent instructions across all platforms
-
-The recognition heuristic and entry quality guidance below are platform-agnostic.
-The bead-specific sections at the bottom apply only to this build.
-
----
+How agents recognize and capture architectural decisions. This is the core of what
+ships in agent instructions across all platforms.
 
 ## The Quality Test
 
@@ -28,17 +21,15 @@ Calibration examples:
 - **NOT worth documenting:** Using `const` over `let` — visible from convention.
 - **Worth documenting:** Relying on `dropNode()` to cascade-delete edges — implicit
   library behavior a junior wouldn't know about.
-- **NOT worth documenting:** Initializing an empty array before a loop when init and
-  assignment could be one line — stylistic, visible from context.
+- **NOT worth documenting:** Initializing an empty array before a loop — stylistic,
+  visible from context.
 - **NOT a decision:** Code you never considered writing. If you never thought "should
-  I add a sort here?" then the absence of a sort is not your decision. Absent code
-  is a concern for reviewers and linters, not decision capture.
+  I add a sort here?" then the absence of a sort is not your decision to document.
 
 ## Scope
 
 Decisions apply to **production code only** — implementation files, configuration,
-types, and data modeling. Test code is out of scope. Test structure, helper patterns,
-and coverage choices are not decisions to capture.
+types, and data modeling. Test code is out of scope.
 
 ## Recognizing Decisions
 
@@ -59,25 +50,20 @@ Common patterns:
 
 5. **You actively chose NOT to do something** — you considered adding a feature,
    library, or edge case handler and decided against it. The key word is *actively*:
-   you had the thought "should I do X?" and chose no. If you never considered X,
-   not doing X is not your decision to document.
+   you had the thought "should I do X?" and chose no.
 
 6. **You invented something not in the spec** — scaffolding, helpers, workarounds.
    If it's not in the requirements, document why it exists.
 
 7. **You ratified a spec-prescribed choice** — the spec said "use X" and you
    implemented it. But the spec choosing X is itself a decision. What alternatives
-   does the library offer? Why is X correct here? A junior following the spec
-   wouldn't know what else was possible.
+   does the library offer? Why is X correct here?
 
 8. **You relied on implicit library behavior** — cascade deletes, shallow vs deep
-   merge, auto-generated IDs, side effects beyond the method name. If the library
-   changed this behavior, your code would silently break. A junior wouldn't know
-   this dependency exists.
+   merge, auto-generated IDs, side effects beyond the method name.
 
 9. **You kept something from existing code without changing it** — an import, a
-   pattern, a data structure. You ratified the original author's choice. Would you
-   make the same choice fresh? A junior might "improve" it and break things.
+   pattern, a data structure. You ratified the original author's choice.
 
 ## What Does NOT Count
 
@@ -85,8 +71,7 @@ Common patterns:
 - Mechanical work with no alternatives ("created the file the spec said to create")
 - Anything a junior could figure out from reading surrounding code, types, or tests
 - Test code — structure, helpers, coverage boundaries, assertion patterns
-- Absent code you never considered writing — if the thought never crossed your mind,
-  the absence is not a decision you can document
+- Absent code you never considered writing
 
 ## Capture Timing
 
@@ -100,11 +85,7 @@ Don't batch. The reasoning degrades quickly.
 ## Post-Work Audit
 
 After completing a unit of work, review the production code **you wrote** — every
-line you added or changed. The audit is scoped to your work, not to what's absent.
-You can only document decisions about code you produced. You cannot meaningfully
-explain the reasoning behind code you never wrote or considered writing.
-
-Walk through your code:
+line you added or changed. Walk through your code:
 
 - **For every function you wrote**: what API shape did you choose and why?
 - **For every library call you made**: what alternatives exist? What implicit behavior
@@ -114,11 +95,9 @@ Walk through your code:
 - **For every config value you set**: what would a different value mean?
 
 Do NOT audit for absent code — features you didn't add, checks you didn't write,
-patterns you never considered. If you never had the thought "should I do X?" then
-not doing X is not your decision to document. Absent code is a concern for linters,
-reviewers, and structural checks — not for decision capture.
+patterns you never considered.
 
-## Writing Good Entries
+## Writing Good Decisions
 
 **Context** should explain the pressure, not restate the title. "The staging pipeline
 handles 8 entry types with different required fields, and downstream code needs to
@@ -133,32 +112,3 @@ you haven't thought it through.
 
 **Alternatives** must explain WHY each was rejected. This tells a future engineer
 exactly when the alternative might become the right choice.
-
----
-
-## Bead-Specific Rules (This Build Only)
-
-The following applies to whygraph's own development via beads. These rules will NOT
-ship in whygraph's agent instructions — they are scaffolding for self-dogfooding.
-
-### Staging File Location
-
-Write to `.whygraph/staging/bead-<N>.md` using UUIDs from `.whygraph/uuid-map.json`.
-
-### Staging Format
-
-```markdown
-## [decision] <concise title describing the choice>
-
-timestamp: <ISO 8601 of when you made this choice>
-context: <the problem or fork — what were you trying to solve?>
-decision: <what you chose and how you implemented it>
-tradeoffs: <what was gained and what was lost>
-alternatives: <other approaches considered and WHY each was rejected>
-affects: <UUID(s) from .whygraph/uuid-map.json>
-tags: <from: arch, data, security, performance, integration, infra, ux>
-```
-
-### Calibration Reference
-
-See `.whygraph/staging/bead-1.md` for a calibrated example.
