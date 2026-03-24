@@ -1,14 +1,14 @@
 ---
 # whygraph-4ar8
 title: CLI validate command
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
     - afk
     - cli
 created_at: 2026-03-24T05:33:40Z
-updated_at: 2026-03-24T05:33:41Z
+updated_at: 2026-03-24T06:07:00Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-l4c1

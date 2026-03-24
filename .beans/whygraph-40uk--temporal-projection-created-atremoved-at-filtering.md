@@ -1,14 +1,14 @@
 ---
 # whygraph-40uk
 title: 'Temporal projection: created_at/removed_at filtering'
-status: todo
+status: completed
 type: task
 priority: critical
 tags:
     - afk
     - core
 created_at: 2026-03-24T05:32:48Z
-updated_at: 2026-03-24T05:32:48Z
+updated_at: 2026-03-24T06:07:50Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-whi8

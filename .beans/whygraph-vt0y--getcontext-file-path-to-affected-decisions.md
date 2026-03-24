@@ -1,14 +1,14 @@
 ---
 # whygraph-vt0y
 title: 'getContext: file path to affected decisions'
-status: todo
+status: completed
 type: task
 priority: critical
 tags:
     - afk
     - core
 created_at: 2026-03-24T05:33:12Z
-updated_at: 2026-03-24T05:33:12Z
+updated_at: 2026-03-24T06:08:35Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-whi8
