@@ -190,11 +190,14 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
       )
       .force("charge", d3.forceManyBody().strength(-800))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collide", d3.forceCollide().radius(40));
+      .force("collide", d3.forceCollide().radius(40))
+      .alphaDecay(0.05)
+      .alphaMin(0.001)
+      .velocityDecay(0.4);
 
     // If we had old positions, start cooler (don't re-explode the layout)
     if (oldPositions.size > 0) {
-      simulation.alpha(0.3);
+      simulation.alpha(0.1);
     }
 
     simulationRef.current = simulation;
