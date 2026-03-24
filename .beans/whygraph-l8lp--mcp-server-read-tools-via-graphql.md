@@ -1,14 +1,14 @@
 ---
 # whygraph-l8lp
 title: 'MCP server: read tools via GraphQL'
-status: todo
+status: completed
 type: task
 priority: high
 tags:
     - afk
     - mcp
 created_at: 2026-03-24T05:35:23Z
-updated_at: 2026-03-24T05:35:24Z
+updated_at: 2026-03-24T06:32:31Z
 parent: whygraph-ileg
 blocked_by:
     - whygraph-lzmh
