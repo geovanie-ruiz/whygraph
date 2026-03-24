@@ -202,7 +202,7 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
       .data(nodes)
       .join("g")
       .attr("cursor", "pointer")
-      .on("click", handleNodeClick as unknown as (this: SVGGElement, event: MouseEvent, d: GraphNode) => void);
+      // Click is handled in drag-end (below) to avoid conflict with drag behavior
 
     // Node shapes
     node.each(function (d) {
