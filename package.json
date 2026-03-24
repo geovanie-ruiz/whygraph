@@ -15,7 +15,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "graphology": "^0.25.0"
+    "graphology": "^0.25.0",
+    "gray-matter": "^4.0.3"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
