@@ -9,6 +9,8 @@ import type {
 export interface GraphViewProps {
   entities: Map<string, Entity>;
   onSelect: (entityId: string) => void;
+  highlightedIds?: Set<string>;
+  staleRefIds?: Set<string>;
 }
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -123,7 +125,7 @@ function buildGraph(entities: Map<string, Entity>): {
   return { nodes, links };
 }
 
-export function GraphView({ entities, onSelect }: GraphViewProps) {
+export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: GraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(
     null,
@@ -225,6 +227,45 @@ export function GraphView({ entities, onSelect }: GraphViewProps) {
       }
     });
 
+    // Gap highlight: pulsing ring on highlighted nodes
+    if (highlightedIds && highlightedIds.size > 0) {
+      node
+        .filter((d) => highlightedIds.has(d.id))
+        .append("circle")
+        .attr("class", "gap-highlight")
+        .attr("r", (d) => nodeRadius(d.label) + 5)
+        .attr("fill", "none")
+        .attr("stroke", "#ff6b35")
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "4,2")
+        .attr("opacity", 0.8);
+    }
+
+    // Stale ref badge: warning "!" indicator
+    if (staleRefIds && staleRefIds.size > 0) {
+      const staleNodes = node.filter((d) => staleRefIds.has(d.id));
+      staleNodes
+        .append("circle")
+        .attr("class", "stale-ref-badge")
+        .attr("cx", (d) => nodeRadius(d.label))
+        .attr("cy", (d) => -nodeRadius(d.label))
+        .attr("r", 7)
+        .attr("fill", "#e74c3c")
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 1);
+      staleNodes
+        .append("text")
+        .attr("class", "stale-ref-badge-text")
+        .attr("x", (d) => nodeRadius(d.label))
+        .attr("y", (d) => -nodeRadius(d.label) + 4)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "10px")
+        .attr("font-weight", "bold")
+        .attr("fill", "#fff")
+        .attr("pointer-events", "none")
+        .text("!");
+    }
+
     // Node labels
     node
       .append("text")
@@ -269,7 +310,7 @@ export function GraphView({ entities, onSelect }: GraphViewProps) {
     return () => {
       simulation.stop();
     };
-  }, [entities, handleNodeClick]);
+  }, [entities, handleNodeClick, highlightedIds, staleRefIds]);
 
   return (
     <svg
