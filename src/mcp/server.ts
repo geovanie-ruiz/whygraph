@@ -1,6 +1,21 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import * as z from "zod/v4";
+import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { generateId } from "../entity/id.js";
+import { writeEntity } from "../entity/writer.js";
+import type { DecisionNode, StructuralNode, DecisionTag, StructuralLabel, SymbolRef } from "../entity/types.js";
+
+function findWhygraphDir(startDir: string): string | null {
+  let dir = startDir;
+  while (true) {
+    if (existsSync(join(dir, ".whygraph", "config.yaml"))) return dir;
+    const parent = join(dir, "..");
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
 
 const DEFAULT_PORT = 4777;
 
@@ -222,8 +237,24 @@ function registerWriteTools(server: McpServer): void {
       `;
       const data = await queryGraphQL<{ createDecision: unknown }>(query, variables);
       return textResult(data.createDecision);
-    } catch (err) {
-      return errorResult((err as Error).message);
+    } catch {
+      // Fallback: write directly to disk when server is unreachable
+      const projectDir = findWhygraphDir(process.cwd());
+      if (!projectDir) return errorResult("Cannot find .whygraph directory and server is unreachable");
+
+      const now = new Date().toISOString();
+      const id = generateId({ prefix: "wg-", length: 4 });
+      const entity: DecisionNode = {
+        id, label: "Decision", title, status: "active", date,
+        affects, tags: tags as DecisionTag[],
+        context, decision, tradeoffs, alternatives,
+        supersedes, created_at: now, updated_at: now,
+      };
+      const { filePath, validation } = writeEntity(join(projectDir, ".whygraph", "graph"), entity);
+      const warnings = validation.errors.length > 0
+        ? ` (${validation.errors.length} validation issue(s) — written to disk, server will reconcile)`
+        : "";
+      return textResult({ ...entity, _fallback: true, _filePath: filePath, _note: `Server unreachable, wrote to disk${warnings}` });
     }
   });
 
@@ -263,8 +294,22 @@ function registerWriteTools(server: McpServer): void {
       `;
       const data = await queryGraphQL<{ createNode: unknown }>(query, variables);
       return textResult(data.createNode);
-    } catch (err) {
-      return errorResult((err as Error).message);
+    } catch {
+      const projectDir = findWhygraphDir(process.cwd());
+      if (!projectDir) return errorResult("Cannot find .whygraph directory and server is unreachable");
+
+      const now = new Date().toISOString();
+      const id = generateId({ prefix: "wg-", length: 4 });
+      const entity: StructuralNode = {
+        id, label: label as StructuralLabel, name, status: "active",
+        parent, refs: refs as SymbolRef[] | undefined, description,
+        created_at: now, updated_at: now,
+      };
+      const { filePath, validation } = writeEntity(join(projectDir, ".whygraph", "graph"), entity);
+      const warnings = validation.errors.length > 0
+        ? ` (${validation.errors.length} validation issue(s) — written to disk, server will reconcile)`
+        : "";
+      return textResult({ ...entity, _fallback: true, _filePath: filePath, _note: `Server unreachable, wrote to disk${warnings}` });
     }
   });
 }

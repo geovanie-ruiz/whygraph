@@ -1,11 +1,11 @@
 ---
 # whygraph-mbau
 title: Strict mode fallback to default when server unreachable
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-25T03:55:20Z
-updated_at: 2026-03-25T03:55:20Z
+updated_at: 2026-03-25T05:04:31Z
 parent: whygraph-rqnp
 ---
 
