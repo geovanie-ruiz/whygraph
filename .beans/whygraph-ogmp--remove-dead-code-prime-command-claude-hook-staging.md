@@ -1,11 +1,11 @@
 ---
 # whygraph-ogmp
 title: 'Remove dead code: prime command, claude-hook, staging references'
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-25T03:55:20Z
-updated_at: 2026-03-25T03:55:20Z
+updated_at: 2026-03-25T04:57:48Z
 parent: whygraph-rqnp
 ---
 

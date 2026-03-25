@@ -5,7 +5,6 @@ import {
   mkdirSync,
   writeFileSync,
   readFileSync,
-  existsSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -28,43 +27,11 @@ describe("writePlatformRules", () => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it("claude-code: creates .claude/settings.json with SessionStart hook", () => {
+  it("claude-code: returns settings.json path", () => {
     const result = writePlatformRules(tempDir, "claude-code", SAMPLE_PRIME);
 
     expect(result.environment).toBe("claude-code");
     expect(result.filePath).toBe(join(tempDir, ".claude", "settings.json"));
-
-    const settings = JSON.parse(readFileSync(result.filePath, "utf-8"));
-    expect(settings.hooks.SessionStart).toEqual([
-      { matcher: "", command: "whygraph prime" },
-    ]);
-  });
-
-  it("claude-code: merges into existing settings.json", () => {
-    const settingsDir = join(tempDir, ".claude");
-    mkdirSync(settingsDir, { recursive: true });
-    writeFileSync(
-      join(settingsDir, "settings.json"),
-      JSON.stringify({ existingKey: true }, null, 2) + "\n",
-      "utf-8",
-    );
-
-    const result = writePlatformRules(tempDir, "claude-code", SAMPLE_PRIME);
-
-    const settings = JSON.parse(readFileSync(result.filePath, "utf-8"));
-    expect(settings.existingKey).toBe(true);
-    expect(settings.hooks.SessionStart).toEqual([
-      { matcher: "", command: "whygraph prime" },
-    ]);
-  });
-
-  it("claude-code: does not duplicate hook on re-run", () => {
-    writePlatformRules(tempDir, "claude-code", SAMPLE_PRIME);
-    writePlatformRules(tempDir, "claude-code", SAMPLE_PRIME);
-
-    const filePath = join(tempDir, ".claude", "settings.json");
-    const settings = JSON.parse(readFileSync(filePath, "utf-8"));
-    expect(settings.hooks.SessionStart).toHaveLength(1);
   });
 
   it("cursor: creates .cursor/rules/whygraph.md", () => {

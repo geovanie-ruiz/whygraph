@@ -40,40 +40,10 @@ function writeClaudeCodeRules(
   projectDir: string,
   _primeOutput: string,
 ): PlatformRulesResult {
-  const settingsPath = join(projectDir, ".claude", "settings.json");
-  const dir = dirname(settingsPath);
-  mkdirSync(dir, { recursive: true });
-
-  let settings: Record<string, unknown> = {};
-  if (existsSync(settingsPath)) {
-    const raw = readFileSync(settingsPath, "utf-8");
-    settings = JSON.parse(raw) as Record<string, unknown>;
-  }
-
-  // Merge hooks — add whygraph prime to SessionStart
-  const hooks = (settings.hooks ?? {}) as Record<string, unknown>;
-  const sessionStart = (hooks.SessionStart ?? []) as Array<Record<string, unknown>>;
-
-  const whygraphHook = {
-    matcher: "",
-    command: "whygraph prime",
-  };
-
-  // Only add if not already present
-  const alreadyExists = sessionStart.some(
-    (h) => h.command === "whygraph prime",
-  );
-
-  if (!alreadyExists) {
-    sessionStart.push(whygraphHook);
-  }
-
-  hooks.SessionStart = sessionStart;
-  settings.hooks = hooks;
-
-  writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
-
-  return { environment: "claude-code", filePath: settingsPath };
+  // TODO(whygraph-imsm): rewrite to register MCP server in settings.json
+  // and write minimal instructions to CLAUDE.md
+  const filePath = join(projectDir, ".claude", "settings.json");
+  return { environment: "claude-code", filePath };
 }
 
 function writeCursorRules(

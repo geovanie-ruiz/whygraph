@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Command } from "commander";
 import yaml from "js-yaml";
 import type { WhygraphConfig } from "../../entity/types.js";
 
@@ -65,38 +64,3 @@ export function runPrime(whygraphDir: string): string {
   return lines.join("\n") + "\n";
 }
 
-// ============================================================
-// CLI Wiring
-// ============================================================
-
-export function registerPrimeCommand(program: Command): void {
-  program
-    .command("prime")
-    .description(
-      "Generate agent instructions from whygraph configuration",
-    )
-    .option("--json", "Output results as JSON")
-    .action((opts: { json?: boolean }) => {
-      try {
-        const output = runPrime(process.cwd());
-
-        if (opts.json) {
-          process.stdout.write(
-            JSON.stringify({ output }, null, 2) + "\n",
-          );
-        } else {
-          process.stdout.write(output);
-        }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        if (opts.json) {
-          process.stdout.write(
-            JSON.stringify({ error: message }, null, 2) + "\n",
-          );
-        } else {
-          process.stderr.write(`Error: ${message}\n`);
-        }
-        process.exitCode = 1;
-      }
-    });
-}
