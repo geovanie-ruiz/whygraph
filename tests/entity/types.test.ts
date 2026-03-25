@@ -142,14 +142,14 @@ describe("entity types", () => {
       prefix: "wg-",
       idLength: 4,
       tags: ["arch", "data", "security", "performance", "integration", "infra", "ux"],
-      mpcMode: "default",
+      mcpMode: "default",
       serverPort: 4777,
     };
 
     expect(config.appName).toBe("MyApp");
     expect(config.prefix).toBe("wg-");
     expect(config.idLength).toBe(4);
-    expect(config.mpcMode).toBe("default");
+    expect(config.mcpMode).toBe("default");
   });
 
   it("structural nodes support refs with optional symbol", () => {

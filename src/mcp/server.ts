@@ -175,7 +175,7 @@ export function createMcpServer(): McpServer {
   });
 
   // Write tools — only registered in strict mode
-  if (process.env["WHYGRAPH_MPC_MODE"] === "strict") {
+  if (process.env["WHYGRAPH_MCP_MODE"] === "strict") {
     registerWriteTools(server);
   }
 

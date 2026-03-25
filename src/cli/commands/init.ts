@@ -104,7 +104,7 @@ export async function runInit(
     prefix: "wg-",
     idLength: 4,
     tags: [...DECISION_TAGS],
-    mpcMode: "default",
+    mcpMode: "default",
     serverPort: 4777,
   };
 

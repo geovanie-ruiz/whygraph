@@ -61,7 +61,7 @@ describe("runInit", () => {
       "infra",
       "ux",
     ]);
-    expect(config.mpcMode).toBe("default");
+    expect(config.mcpMode).toBe("default");
     expect(config.serverPort).toBe(4777);
   });
 

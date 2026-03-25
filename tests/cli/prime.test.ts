@@ -29,7 +29,7 @@ function defaultConfig(overrides?: Partial<WhygraphConfig>): WhygraphConfig {
     prefix: "wg-",
     idLength: 4,
     tags: ["arch", "data", "security", "performance", "integration", "infra", "ux"],
-    mpcMode: "default",
+    mcpMode: "default",
     serverPort: 4777,
     ...overrides,
   };

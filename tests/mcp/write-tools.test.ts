@@ -19,7 +19,7 @@ describe("MCP write tools (strict mode)", () => {
 
   beforeEach(async () => {
     mockFetch.mockReset();
-    process.env["WHYGRAPH_MPC_MODE"] = "strict";
+    process.env["WHYGRAPH_MCP_MODE"] = "strict";
     delete process.env["WHYGRAPH_PORT"];
 
     const mcpServer = createMcpServer();
@@ -31,7 +31,7 @@ describe("MCP write tools (strict mode)", () => {
   });
 
   afterEach(async () => {
-    delete process.env["WHYGRAPH_MPC_MODE"];
+    delete process.env["WHYGRAPH_MCP_MODE"];
     await client.close();
   });
 
@@ -175,7 +175,7 @@ describe("MCP write tools (strict mode)", () => {
 
 describe("MCP write tools not registered in default mode", () => {
   it("does not register write tools when mode is not strict", async () => {
-    delete process.env["WHYGRAPH_MPC_MODE"];
+    delete process.env["WHYGRAPH_MCP_MODE"];
 
     const mcpServer = createMcpServer();
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();

@@ -5,7 +5,7 @@ import yaml from "js-yaml";
 import type {
   WhygraphConfig,
   Environment,
-  MpcMode,
+  McpMode,
   DecisionTag,
 } from "../../entity/types.js";
 import { DECISION_TAGS } from "../../entity/types.js";
@@ -16,7 +16,7 @@ import { DECISION_TAGS } from "../../entity/types.js";
 
 export interface ConfigUpdates {
   environment?: string;
-  mpcMode?: string;
+  mcpMode?: string;
   serverPort?: number;
   tags?: string[];
 }
@@ -36,7 +36,7 @@ const VALID_ENVIRONMENTS: readonly string[] = [
   "copilot",
   "other",
 ];
-const VALID_MPC_MODES: readonly string[] = ["default", "strict"];
+const VALID_MCP_MODES: readonly string[] = ["default", "strict"];
 
 function validateUpdates(updates: ConfigUpdates): void {
   if (
@@ -49,11 +49,11 @@ function validateUpdates(updates: ConfigUpdates): void {
   }
 
   if (
-    updates.mpcMode !== undefined &&
-    !VALID_MPC_MODES.includes(updates.mpcMode)
+    updates.mcpMode !== undefined &&
+    !VALID_MCP_MODES.includes(updates.mcpMode)
   ) {
     throw new Error(
-      `Invalid mpcMode "${updates.mpcMode}". Must be one of: ${VALID_MPC_MODES.join(", ")}`,
+      `Invalid mcpMode "${updates.mcpMode}". Must be one of: ${VALID_MCP_MODES.join(", ")}`,
     );
   }
 
@@ -102,8 +102,8 @@ export function runConfig(
   if (updates.environment !== undefined) {
     config.environment = updates.environment as Environment;
   }
-  if (updates.mpcMode !== undefined) {
-    config.mpcMode = updates.mpcMode as MpcMode;
+  if (updates.mcpMode !== undefined) {
+    config.mcpMode = updates.mcpMode as McpMode;
   }
   if (updates.serverPort !== undefined) {
     config.serverPort = updates.serverPort;
@@ -129,7 +129,7 @@ function formatConfig(config: WhygraphConfig): string {
     `prefix:      ${config.prefix}`,
     `idLength:    ${config.idLength}`,
     `tags:        ${config.tags.join(", ")}`,
-    `mpcMode:     ${config.mpcMode}`,
+    `mcpMode:     ${config.mcpMode}`,
     `serverPort:  ${config.serverPort}`,
   ];
   return lines.join("\n");
@@ -140,13 +140,13 @@ export function registerConfigCommand(program: Command): void {
     .command("config")
     .description("View or update whygraph configuration")
     .option("--environment <env>", "Update environment")
-    .option("--mpc-mode <mode>", "Update MPC mode (default | strict)")
+    .option("--mcp-mode <mode>", "Update MCP mode (default | strict)")
     .option("--server-port <port>", "Update server port")
     .option("--json", "Output results as JSON")
     .action(
       (opts: {
         environment?: string;
-        mpcMode?: string;
+        mcpMode?: string;
         serverPort?: string;
         json?: boolean;
       }) => {
@@ -154,7 +154,7 @@ export function registerConfigCommand(program: Command): void {
           const updates: ConfigUpdates = {};
           if (opts.environment !== undefined)
             updates.environment = opts.environment;
-          if (opts.mpcMode !== undefined) updates.mpcMode = opts.mpcMode;
+          if (opts.mcpMode !== undefined) updates.mcpMode = opts.mcpMode;
           if (opts.serverPort !== undefined)
             updates.serverPort = Number(opts.serverPort);
 

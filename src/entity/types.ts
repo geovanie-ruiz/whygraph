@@ -100,7 +100,7 @@ export function isDecisionNode(entity: Entity): entity is DecisionNode {
 // ============================================================
 
 export type Environment = "claude-code" | "cursor" | "copilot" | "other";
-export type MpcMode = "default" | "strict";
+export type McpMode = "default" | "strict";
 
 export interface WhygraphConfig {
   appName: string;
@@ -108,6 +108,6 @@ export interface WhygraphConfig {
   prefix: string;
   idLength: number;
   tags: DecisionTag[];
-  mpcMode: MpcMode;
+  mcpMode: McpMode;
   serverPort: number;
 }

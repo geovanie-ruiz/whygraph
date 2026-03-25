@@ -59,7 +59,7 @@ export function runPrime(whygraphDir: string): string {
     `- Prefix: ${config.prefix}`,
     `- Tags: ${config.tags.join(", ")}`,
     `- Environment: ${config.environment}`,
-    `- MPC Mode: ${config.mpcMode}`,
+    `- MCP Mode: ${config.mcpMode}`,
   ];
 
   return lines.join("\n") + "\n";

@@ -1,11 +1,11 @@
 ---
 # whygraph-2kpk
 title: Fix MPC → MCP typo across codebase
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-25T03:55:20Z
-updated_at: 2026-03-25T03:55:20Z
+updated_at: 2026-03-25T04:50:27Z
 parent: whygraph-rqnp
 ---
 

@@ -30,7 +30,7 @@ function defaultConfig(): WhygraphConfig {
     prefix: "wg-",
     idLength: 4,
     tags: ["arch", "data", "security", "performance", "integration", "infra", "ux"],
-    mpcMode: "default",
+    mcpMode: "default",
     serverPort: 4777,
   };
 }
@@ -60,7 +60,7 @@ describe("runConfig", () => {
     expect(result.config.tags).toEqual([
       "arch", "data", "security", "performance", "integration", "infra", "ux",
     ]);
-    expect(result.config.mpcMode).toBe("default");
+    expect(result.config.mcpMode).toBe("default");
     expect(result.config.serverPort).toBe(4777);
   });
 
@@ -92,8 +92,8 @@ describe("runConfig", () => {
       /Invalid environment/,
     );
 
-    expect(() => runConfig(tempDir, { mpcMode: "loose" })).toThrow(
-      /Invalid mpcMode/,
+    expect(() => runConfig(tempDir, { mcpMode: "loose" })).toThrow(
+      /Invalid mcpMode/,
     );
   });
 
