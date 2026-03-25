@@ -162,7 +162,8 @@ export function registerInitCommand(program: Command): void {
           process.stdout.write(
             `Initialized whygraph in .whygraph/\n` +
             `  App node: ${result.appId}\n` +
-            `  Config: ${result.configPath}\n`,
+            `  Config: ${result.configPath}\n` +
+            `\nRun 'whygraph up' to start the server.\n`,
           );
         }
       } catch (err: unknown) {
