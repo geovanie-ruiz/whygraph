@@ -38,15 +38,18 @@ function resolveEntityName(
 function DecisionDetail({
   entity,
   entities,
+  hasErrors,
 }: {
   entity: DecisionNodeEntity;
   entities: Map<string, Entity>;
+  hasErrors?: boolean;
 }) {
   return (
     <div data-testid="decision-detail">
       <h2>{entity.title}</h2>
       <div className="detail-field">
-        <strong>Status:</strong> {entity.status}
+        <strong>Status:</strong>{" "}
+        {hasErrors ? <span className="detail-status--error">error</span> : entity.status}
       </div>
       <div className="detail-field">
         <strong>Date:</strong> {entity.date}
@@ -97,7 +100,7 @@ function DecisionDetail({
   );
 }
 
-function StructuralDetail({ entity }: { entity: StructuralNodeEntity }) {
+function StructuralDetail({ entity, hasErrors }: { entity: StructuralNodeEntity; hasErrors?: boolean }) {
   return (
     <div data-testid="structural-detail">
       <h2>{entity.name}</h2>
@@ -105,7 +108,8 @@ function StructuralDetail({ entity }: { entity: StructuralNodeEntity }) {
         <strong>Label:</strong> {entity.label}
       </div>
       <div className="detail-field">
-        <strong>Status:</strong> {entity.status}
+        <strong>Status:</strong>{" "}
+        {hasErrors ? <span className="detail-status--error">error</span> : entity.status}
       </div>
       {entity.parent && (
         <div className="detail-field">
@@ -175,9 +179,9 @@ export function DetailPanel({ entity, entities, onClose, errors }: DetailPanelPr
           </button>
           {errors && errors.length > 0 && <ErrorDetail errors={errors} />}
           {isDecision(entity) ? (
-            <DecisionDetail entity={entity} entities={entities} />
+            <DecisionDetail entity={entity} entities={entities} hasErrors={!!errors?.length} />
           ) : isStructural(entity) ? (
-            <StructuralDetail entity={entity} />
+            <StructuralDetail entity={entity} hasErrors={!!errors?.length} />
           ) : null}
         </>
       )}

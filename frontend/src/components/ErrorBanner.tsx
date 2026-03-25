@@ -25,23 +25,42 @@ interface EntityValidationError {
   errors: ValidationError[];
 }
 
+const CLI_RESOLVABLE_FIELDS = new Set(["tags", "parent", "date", "affects", "supersedes"]);
+
+function isCliResolvable(errors: ValidationError[]): boolean {
+  return errors.every((e) => CLI_RESOLVABLE_FIELDS.has(e.field));
+}
+
 export interface ErrorBannerProps {
+  nodeErrors: Map<string, ValidationError[]>;
   generalErrors: EntityValidationError[];
 }
 
-export function ErrorBanner({ generalErrors }: ErrorBannerProps) {
-  if (generalErrors.length === 0) return null;
+export function ErrorBanner({ nodeErrors, generalErrors }: ErrorBannerProps) {
+  const totalIssues = nodeErrors.size + generalErrors.length;
+  if (totalIssues === 0) return null;
+
+  let cliResolvable = 0;
+  let agentNeeded = 0;
+
+  for (const errors of nodeErrors.values()) {
+    if (isCliResolvable(errors)) cliResolvable++;
+    else agentNeeded++;
+  }
+  for (const entry of generalErrors) {
+    if (isCliResolvable(entry.errors)) cliResolvable++;
+    else agentNeeded++;
+  }
+
+  const parts: string[] = [];
+  if (agentNeeded > 0) parts.push(`${agentNeeded} need an agent`);
+  if (cliResolvable > 0) parts.push(`${cliResolvable} resolvable via whygraph issues`);
 
   return (
     <div className="error-banner">
       <span className="error-banner__icon">!</span>
       <span className="error-banner__text">
-        {generalErrors.length} entity {generalErrors.length === 1 ? "issue" : "issues"} detected
-        {generalErrors.map((e) => (
-          <span key={e.entityId} className="error-banner__detail">
-            {e.entityId}: {e.errors.map((err) => err.message).join("; ")}
-          </span>
-        ))}
+        {totalIssues} entity {totalIssues === 1 ? "issue" : "issues"}: {parts.join(", ")}
       </span>
     </div>
   );

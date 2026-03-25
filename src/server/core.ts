@@ -2,7 +2,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import graphology from "graphology";
 import { parseEntity } from "../entity/parser.js";
+import { isDecisionNode } from "../entity/types.js";
 import { validateEntity } from "../entity/validate.js";
+import type { ValidationError } from "../entity/validate.js";
 import { reconcileIssue, listIssues, deleteIssue } from "../entity/issues.js";
 import type { EntityIssue } from "../entity/issues.js";
 import { buildGraph } from "../graph/projection.js";
@@ -112,7 +114,31 @@ export class ServerCore {
 
   private reconcileEntityIssue(id: string, entity: Entity): void {
     const { errors } = validateEntity(entity);
-    reconcileIssue(this.whygraphDir, id, errors);
+    const graphErrors = this.validateGraphRefs(entity);
+    reconcileIssue(this.whygraphDir, id, [...errors, ...graphErrors]);
+  }
+
+  private validateGraphRefs(entity: Entity): ValidationError[] {
+    const errors: ValidationError[] = [];
+    if (isDecisionNode(entity)) {
+      for (const ref of entity.affects) {
+        if (!this.entityMap.has(ref)) {
+          errors.push({
+            field: "affects",
+            message: `affects ref "${ref}" does not exist in the graph`,
+            severity: "warning",
+          });
+        }
+      }
+      if (entity.supersedes && !this.entityMap.has(entity.supersedes)) {
+        errors.push({
+          field: "supersedes",
+          message: `supersedes ref "${entity.supersedes}" does not exist in the graph`,
+          severity: "warning",
+        });
+      }
+    }
+    return errors;
   }
 
   private reconcileAllIssues(): void {

@@ -5,13 +5,17 @@ import type { EntityIssue } from "../../entity/issues.js";
 import { findWhygraphDir } from "./server-utils.js";
 
 export interface IssuesResult {
-  generalErrors: number;
-  nodeErrors: number;
-  resolvable: number;
+  agentNeeded: number;
+  cliResolvable: number;
+  total: number;
   issues: EntityIssue[];
 }
 
-const RESOLVABLE_FIELDS = new Set(["alternatives", "context", "decision", "tradeoffs"]);
+const CLI_RESOLVABLE_FIELDS = new Set(["tags", "parent", "date", "affects", "supersedes"]);
+
+function isCliResolvable(issue: EntityIssue): boolean {
+  return issue.errors.length > 0 && issue.errors.every((e) => CLI_RESOLVABLE_FIELDS.has(e.field));
+}
 
 export function runIssues(targetDir: string): IssuesResult {
   const projectDir = findWhygraphDir(targetDir);
@@ -21,25 +25,18 @@ export function runIssues(targetDir: string): IssuesResult {
 
   const whygraphDir = join(projectDir, ".whygraph");
   const issues = listIssues(whygraphDir);
-  let generalErrors = 0;
-  let nodeErrors = 0;
-  let resolvable = 0;
+  let agentNeeded = 0;
+  let cliResolvable = 0;
 
   for (const issue of issues) {
-    const hasErrors = issue.errors.some((e) => e.severity === "error");
-    if (hasErrors) {
-      nodeErrors++;
+    if (isCliResolvable(issue)) {
+      cliResolvable++;
     } else {
-      generalErrors++;
-    }
-
-    const allResolvable = issue.errors.every((e) => RESOLVABLE_FIELDS.has(e.field));
-    if (allResolvable && issue.errors.length > 0) {
-      resolvable++;
+      agentNeeded++;
     }
   }
 
-  return { generalErrors, nodeErrors, resolvable, issues };
+  return { agentNeeded, cliResolvable, total: issues.length, issues };
 }
 
 export function registerIssuesCommand(program: Command): void {
@@ -54,19 +51,20 @@ export function registerIssuesCommand(program: Command): void {
         if (opts.json) {
           process.stdout.write(JSON.stringify(result, null, 2) + "\n");
         } else {
-          if (result.issues.length === 0) {
+          if (result.total === 0) {
             process.stdout.write("No issues found.\n");
             return;
           }
 
-          process.stdout.write(
-            `${result.nodeErrors} node-level error(s), ` +
-            `${result.generalErrors} general warning(s), ` +
-            `${result.resolvable} resolvable now\n\n`,
-          );
+          const parts: string[] = [];
+          if (result.agentNeeded > 0) parts.push(`${result.agentNeeded} need an agent`);
+          if (result.cliResolvable > 0) parts.push(`${result.cliResolvable} resolvable via whygraph issues`);
+
+          process.stdout.write(`${result.total} issue(s): ${parts.join(", ")}\n\n`);
 
           for (const issue of result.issues) {
-            process.stdout.write(`${issue.entityId}:\n`);
+            const tag = isCliResolvable(issue) ? "[CLI]" : "[AGENT]";
+            process.stdout.write(`${tag} ${issue.entityId}:\n`);
             for (const err of issue.errors) {
               const prefix = err.severity === "error" ? "  ERROR" : "  WARN ";
               process.stdout.write(`${prefix} ${err.field}: ${err.message}\n`);

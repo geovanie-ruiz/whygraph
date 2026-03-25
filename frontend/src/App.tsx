@@ -146,9 +146,7 @@ function EntityDashboard() {
           />
         </Header>
         <div className="app-graph-area">
-          {generalErrors.length > 0 && (
-            <ErrorBanner generalErrors={generalErrors} />
-          )}
+          <ErrorBanner nodeErrors={nodeErrors} generalErrors={generalErrors} />
           <GraphView
             entities={filteredEntities}
             onSelect={handleSelect}

@@ -1,0 +1,12 @@
+{
+  "entityId": "wg-tst3",
+  "errors": [
+    {
+      "field": "date",
+      "message": "date must match YYYY-MM-DD format",
+      "severity": "error"
+    }
+  ],
+  "createdAt": "2026-03-25T13:24:53.961Z",
+  "updatedAt": "2026-03-25T13:24:53.961Z"
+}
