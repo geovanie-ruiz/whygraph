@@ -302,12 +302,10 @@ export function buildSchema(core: ServerCore) {
           return searchDecisions(core.getEntityMap(), args.query);
         },
         validationErrors: () => {
-          const derived = computeDerivedState(core.getEntityMap());
-          const results: Array<{ entityId: string; errors: Array<{ field: string; message: string; severity: string }> }> = [];
-          for (const [entityId, errors] of derived.validationErrors) {
-            results.push({ entityId, errors });
-          }
-          return results;
+          return core.getIssues().map((issue) => ({
+            entityId: issue.entityId,
+            errors: issue.errors,
+          }));
         },
         supersedeCandidates: () => {
           const derived = computeDerivedState(core.getEntityMap());

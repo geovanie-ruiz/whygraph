@@ -1,11 +1,11 @@
 ---
 # whygraph-m4y4
 title: Issue sidecar system for entity validation problems
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-25T03:55:20Z
-updated_at: 2026-03-25T03:55:20Z
+updated_at: 2026-03-25T05:02:16Z
 parent: whygraph-rqnp
 ---
 

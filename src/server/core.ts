@@ -2,6 +2,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import graphology from "graphology";
 import { parseEntity } from "../entity/parser.js";
+import { validateEntity } from "../entity/validate.js";
+import { reconcileIssue, listIssues, deleteIssue } from "../entity/issues.js";
+import type { EntityIssue } from "../entity/issues.js";
 import { buildGraph } from "../graph/projection.js";
 import { PubSub } from "./pubsub.js";
 import type { Entity } from "../entity/types.js";
@@ -55,6 +58,11 @@ export class ServerCore {
     }
 
     this.rebuildGraph();
+    this.reconcileAllIssues();
+  }
+
+  getIssues(): EntityIssue[] {
+    return listIssues(this.whygraphDir);
   }
 
   getEntity(id: string): Entity | undefined {
@@ -77,6 +85,7 @@ export class ServerCore {
     const isUpdate = this.entityMap.has(id);
     this.entityMap.set(id, entity);
     this.rebuildGraph();
+    this.reconcileEntityIssue(id, entity);
     this.pubsub.publish({
       type: isUpdate ? "entity_updated" : "entity_created",
       entityId: id,
@@ -88,6 +97,7 @@ export class ServerCore {
     const existed = this.entityMap.has(id);
     this.entityMap.delete(id);
     this.rebuildGraph();
+    deleteIssue(this.whygraphDir, id);
     if (existed) {
       this.pubsub.publish({
         type: "entity_deleted",
@@ -98,5 +108,23 @@ export class ServerCore {
 
   private rebuildGraph(): void {
     this.graph = buildGraph(this.getAllEntities());
+  }
+
+  private reconcileEntityIssue(id: string, entity: Entity): void {
+    const { errors } = validateEntity(entity);
+    reconcileIssue(this.whygraphDir, id, errors);
+  }
+
+  private reconcileAllIssues(): void {
+    for (const [id, entity] of this.entityMap) {
+      this.reconcileEntityIssue(id, entity);
+    }
+
+    const existingIssues = listIssues(this.whygraphDir);
+    for (const issue of existingIssues) {
+      if (!this.entityMap.has(issue.entityId)) {
+        deleteIssue(this.whygraphDir, issue.entityId);
+      }
+    }
   }
 }
