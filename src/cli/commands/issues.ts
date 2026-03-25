@@ -100,6 +100,16 @@ async function resolveParentInteractively(
     return false;
   }
 
+  // Show context so the developer knows what this node is
+  process.stdout.write(`\n  ${entity.label}: ${entity.name} (${entity.id})\n`);
+  if (entity.description) {
+    process.stdout.write(`  ${entity.description}\n`);
+  }
+  if (entity.refs && entity.refs.length > 0) {
+    process.stdout.write(`  Files: ${entity.refs.map((r) => r.file).join(", ")}\n`);
+  }
+  process.stdout.write("\n");
+
   const featureResponse = await prompts({
     type: "select",
     name: "featureId",
