@@ -309,27 +309,22 @@ export function registerIssuesCommand(program: Command): void {
 
         // Walk through CLI-resolvable issues interactively
         const cliIssues = result.issues.filter((i) => isCliResolvable(i));
-        let fixesMade = false;
         if (cliIssues.length > 0) {
+          const port = getConfiguredPort(projectDir);
+          if (!isServerRunning(port)) {
+            process.stdout.write(
+              `${cliIssues.length} resolvable issue(s) found.\n` +
+              `Run 'whygraph up' first so resolved issues are properly reconciled.\n`,
+            );
+            return;
+          }
+
           process.stdout.write("--- Resolvable issues ---\n\n");
 
           const entities = loadEntitiesFromDisk(graphDir);
 
           for (const issue of cliIssues) {
-            if (await resolveIssueInteractively(issue, entities, graphDir)) {
-              fixesMade = true;
-            }
-          }
-        }
-
-        if (fixesMade) {
-          const port = getConfiguredPort(projectDir);
-          if (isServerRunning(port)) {
-            process.stdout.write("Server is running — issues will reconcile automatically.\n");
-          } else {
-            process.stdout.write(
-              "Entity files updated. Run 'whygraph up' to start the server and reconcile issues.\n",
-            );
+            await resolveIssueInteractively(issue, entities, graphDir);
           }
         }
       } catch (err: unknown) {
