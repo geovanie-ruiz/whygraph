@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import type { Command } from "commander";
 import prompts from "prompts";
-import { listIssues, deleteIssue } from "../../entity/issues.js";
+import { listIssues } from "../../entity/issues.js";
 import type { EntityIssue } from "../../entity/issues.js";
 import { parseEntity } from "../../entity/parser.js";
 import { writeEntity } from "../../entity/writer.js";
@@ -213,12 +213,11 @@ async function resolveIssueInteractively(
   issue: EntityIssue,
   entities: Map<string, Entity>,
   graphDir: string,
-  whygraphDir: string,
-): Promise<void> {
+): Promise<boolean> {
   const entity = entities.get(issue.entityId);
   if (!entity) {
     process.stdout.write(`  Entity ${issue.entityId} not found on disk. Skipping.\n\n`);
-    return;
+    return false;
   }
 
   let resolved = false;
@@ -235,9 +234,7 @@ async function resolveIssueInteractively(
     }
   }
 
-  if (resolved) {
-    deleteIssue(whygraphDir, issue.entityId);
-  }
+  return resolved;
 }
 
 export function registerIssuesCommand(program: Command): void {
@@ -312,14 +309,27 @@ export function registerIssuesCommand(program: Command): void {
 
         // Walk through CLI-resolvable issues interactively
         const cliIssues = result.issues.filter((i) => isCliResolvable(i));
+        let fixesMade = false;
         if (cliIssues.length > 0) {
           process.stdout.write("--- Resolvable issues ---\n\n");
 
           const entities = loadEntitiesFromDisk(graphDir);
 
-          const whygraphDir = join(projectDir, ".whygraph");
           for (const issue of cliIssues) {
-            await resolveIssueInteractively(issue, entities, graphDir, whygraphDir);
+            if (await resolveIssueInteractively(issue, entities, graphDir)) {
+              fixesMade = true;
+            }
+          }
+        }
+
+        if (fixesMade) {
+          const port = getConfiguredPort(projectDir);
+          if (isServerRunning(port)) {
+            process.stdout.write("Server is running — issues will reconcile automatically.\n");
+          } else {
+            process.stdout.write(
+              "Entity files updated. Run 'whygraph up' to start the server and reconcile issues.\n",
+            );
           }
         }
       } catch (err: unknown) {
