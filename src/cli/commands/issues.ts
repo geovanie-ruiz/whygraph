@@ -152,14 +152,28 @@ async function resolveParentInteractively(
   return true;
 }
 
+function printDecisionContext(entity: DecisionNode): void {
+  process.stdout.write(`\n  Decision: ${entity.title} (${entity.id})\n`);
+  if (entity.context) {
+    const preview = entity.context.length > 120 ? entity.context.slice(0, 120) + "..." : entity.context;
+    process.stdout.write(`  Context: ${preview}\n`);
+  }
+  if (entity.affects.length > 0) {
+    process.stdout.write(`  Affects: ${entity.affects.join(", ")}\n`);
+  }
+  process.stdout.write("\n");
+}
+
 async function resolveDateInteractively(
   entity: DecisionNode,
   graphDir: string,
 ): Promise<boolean> {
+  printDecisionContext(entity);
+
   const response = await prompts({
     type: "text",
     name: "date",
-    message: `"${entity.title}" has invalid date "${entity.date}". Enter corrected date (YYYY-MM-DD):`,
+    message: `Invalid date "${entity.date}". Enter corrected date (YYYY-MM-DD):`,
     validate: (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) || "Must be YYYY-MM-DD",
   }, { onCancel });
 
@@ -177,10 +191,12 @@ async function resolveTagInteractively(
   badTag: string,
   graphDir: string,
 ): Promise<boolean> {
+  printDecisionContext(entity);
+
   const response = await prompts({
     type: "select",
     name: "tag",
-    message: `"${entity.title}" has invalid tag "${badTag}". Pick a replacement:`,
+    message: `Invalid tag "${badTag}". Pick a replacement:`,
     choices: DECISION_TAGS.map((t) => ({ title: t, value: t })),
   }, { onCancel });
 
