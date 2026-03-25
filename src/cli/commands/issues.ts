@@ -269,40 +269,37 @@ export function registerIssuesCommand(program: Command): void {
         const agentIssues = result.issues.filter((i) => !isCliResolvable(i));
         if (agentIssues.length > 0) {
           if (agentIssues.length < 3) {
-            process.stdout.write("--- Agent-needed issues ---\n\n");
             for (const issue of agentIssues) {
-              process.stdout.write(`${issue.entityId}:\n`);
-              for (const err of issue.errors) {
-                const prefix = err.severity === "error" ? "  ERROR" : "  WARN ";
-                process.stdout.write(`${prefix} ${err.field}: ${err.message}\n`);
-              }
-              process.stdout.write(`  Prompt: ${generateAgentPrompt(issue, graphDir)}\n\n`);
+              process.stdout.write(`[AGENT] ${generateAgentPrompt(issue, graphDir)}\n\n`);
             }
           } else {
+            // Group by missing fields to avoid repeating instructions
+            const byFields = new Map<string, string[]>();
+            for (const issue of agentIssues) {
+              const files = readdirSync(graphDir).filter((f) => f.startsWith(issue.entityId));
+              const filePath = files.length > 0 ? `.whygraph/graph/${files[0]}` : `.whygraph/graph/${issue.entityId}.md`;
+              const key = issue.errors.map((e) => e.field).sort().join(", ");
+              if (!byFields.has(key)) byFields.set(key, []);
+              byFields.get(key)!.push(filePath);
+            }
+
             const mdLines: string[] = [
-              "# Whygraph Agent Issues",
-              "",
-              `${agentIssues.length} entities need an agent to resolve validation issues.`,
-              "For each entity below, read the decision file, understand the context",
-              "from the codebase, and fill in the missing sections.",
+              "For each file, read it and its affected codebase paths, then fill in the missing sections.",
               "",
             ];
-            for (const issue of agentIssues) {
-              mdLines.push(`## ${issue.entityId}`);
-              mdLines.push("");
-              for (const err of issue.errors) {
-                mdLines.push(`- **${err.field}**: ${err.message}`);
+            for (const [fields, files] of byFields) {
+              mdLines.push(`Missing: ${fields}`);
+              for (const f of files) {
+                mdLines.push(`- ${f}`);
               }
-              mdLines.push("");
-              mdLines.push(`**Prompt:** ${generateAgentPrompt(issue, graphDir)}`);
               mdLines.push("");
             }
 
             const mdPath = join(projectDir, ".whygraph", "AGENT_ISSUES.md");
             writeFileSync(mdPath, mdLines.join("\n"), "utf-8");
             process.stdout.write(
-              `${agentIssues.length} agent-needed issues written to .whygraph/AGENT_ISSUES.md\n` +
-              `Prompt your agent: "Read .whygraph/AGENT_ISSUES.md and resolve each issue."\n\n`,
+              `${agentIssues.length} agent issues written to .whygraph/AGENT_ISSUES.md\n` +
+              `Prompt: "Read .whygraph/AGENT_ISSUES.md and resolve each issue."\n\n`,
             );
           }
         }
