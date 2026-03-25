@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import type { Command } from "commander";
 import prompts from "prompts";
 import { listIssues } from "../../entity/issues.js";
@@ -10,6 +10,12 @@ import { DECISION_TAGS } from "../../entity/types.js";
 import type { Entity, DecisionNode, StructuralNode } from "../../entity/types.js";
 import { isDecisionNode, isStructuralNode } from "../../entity/types.js";
 import { findWhygraphDir, getConfiguredPort, isServerRunning } from "./server-utils.js";
+
+class UserCancelled extends Error {
+  constructor() { super("cancelled"); }
+}
+
+const onCancel = () => { throw new UserCancelled(); };
 
 export interface IssuesResult {
   agentNeeded: number;
@@ -102,7 +108,7 @@ async function resolveParentInteractively(
       title: `${(f as StructuralNode).name} (${f.id})`,
       value: f.id,
     })),
-  });
+  }, { onCancel });
 
   if (!featureResponse.featureId) return false;
 
@@ -122,7 +128,7 @@ async function resolveParentInteractively(
           value: c.id,
         })),
       ],
-    });
+    }, { onCancel });
 
     if (!drillDown.parentId) return false;
     entity.parent = drillDown.parentId;
@@ -145,7 +151,7 @@ async function resolveDateInteractively(
     name: "date",
     message: `"${entity.title}" has invalid date "${entity.date}". Enter corrected date (YYYY-MM-DD):`,
     validate: (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) || "Must be YYYY-MM-DD",
-  });
+  }, { onCancel });
 
   if (!response.date) return false;
 
@@ -166,7 +172,7 @@ async function resolveTagInteractively(
     name: "tag",
     message: `"${entity.title}" has invalid tag "${badTag}". Pick a replacement:`,
     choices: DECISION_TAGS.map((t) => ({ title: t, value: t })),
-  });
+  }, { onCancel });
 
   if (!response.tag) return false;
 
@@ -230,17 +236,45 @@ export function registerIssuesCommand(program: Command): void {
         const projectDir = findWhygraphDir(process.cwd())!;
         const graphDir = join(projectDir, ".whygraph", "graph");
 
-        // Show agent-needed issues with suggested prompts
+        // Agent-needed issues: inline if < 3, MD file if >= 3
         const agentIssues = result.issues.filter((i) => !isCliResolvable(i));
         if (agentIssues.length > 0) {
-          process.stdout.write("--- Agent-needed issues ---\n\n");
-          for (const issue of agentIssues) {
-            process.stdout.write(`${issue.entityId}:\n`);
-            for (const err of issue.errors) {
-              const prefix = err.severity === "error" ? "  ERROR" : "  WARN ";
-              process.stdout.write(`${prefix} ${err.field}: ${err.message}\n`);
+          if (agentIssues.length < 3) {
+            process.stdout.write("--- Agent-needed issues ---\n\n");
+            for (const issue of agentIssues) {
+              process.stdout.write(`${issue.entityId}:\n`);
+              for (const err of issue.errors) {
+                const prefix = err.severity === "error" ? "  ERROR" : "  WARN ";
+                process.stdout.write(`${prefix} ${err.field}: ${err.message}\n`);
+              }
+              process.stdout.write(`  Prompt: ${generateAgentPrompt(issue, graphDir)}\n\n`);
             }
-            process.stdout.write(`  Prompt: ${generateAgentPrompt(issue, graphDir)}\n\n`);
+          } else {
+            const mdLines: string[] = [
+              "# Whygraph Agent Issues",
+              "",
+              `${agentIssues.length} entities need an agent to resolve validation issues.`,
+              "For each entity below, read the decision file, understand the context",
+              "from the codebase, and fill in the missing sections.",
+              "",
+            ];
+            for (const issue of agentIssues) {
+              mdLines.push(`## ${issue.entityId}`);
+              mdLines.push("");
+              for (const err of issue.errors) {
+                mdLines.push(`- **${err.field}**: ${err.message}`);
+              }
+              mdLines.push("");
+              mdLines.push(`**Prompt:** ${generateAgentPrompt(issue, graphDir)}`);
+              mdLines.push("");
+            }
+
+            const mdPath = join(projectDir, ".whygraph", "AGENT_ISSUES.md");
+            writeFileSync(mdPath, mdLines.join("\n"), "utf-8");
+            process.stdout.write(
+              `${agentIssues.length} agent-needed issues written to .whygraph/AGENT_ISSUES.md\n` +
+              `Prompt your agent: "Read .whygraph/AGENT_ISSUES.md and resolve each issue."\n\n`,
+            );
           }
         }
 
@@ -267,6 +301,10 @@ export function registerIssuesCommand(program: Command): void {
           }
         }
       } catch (err: unknown) {
+        if (err instanceof UserCancelled) {
+          process.stdout.write("\nCancelled.\n");
+          return;
+        }
         const message = err instanceof Error ? err.message : String(err);
         if (opts.json) {
           process.stdout.write(JSON.stringify({ error: message }, null, 2) + "\n");
