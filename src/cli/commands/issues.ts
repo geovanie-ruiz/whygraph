@@ -296,17 +296,6 @@ export function registerIssuesCommand(program: Command): void {
           const entities = loadEntitiesFromDisk(graphDir);
 
           for (const issue of cliIssues) {
-            const entityName = entities.get(issue.entityId);
-            const name = entityName
-              ? isDecisionNode(entityName) ? entityName.title : (entityName as StructuralNode).name
-              : issue.entityId;
-
-            process.stdout.write(`${issue.entityId} (${name}):\n`);
-            for (const err of issue.errors) {
-              const prefix = err.severity === "error" ? "  ERROR" : "  WARN ";
-              process.stdout.write(`${prefix} ${err.field}: ${err.message}\n`);
-            }
-
             await resolveIssueInteractively(issue, entities, graphDir);
           }
         }
