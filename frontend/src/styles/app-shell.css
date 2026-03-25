@@ -121,13 +121,12 @@
 
 .detail-panel__close {
   position: absolute;
-  top: var(--space-6);
-  right: var(--space-6);
+  top: var(--space-4);
+  right: var(--space-4);
   font-size: var(--text-xl);
   color: var(--text-secondary);
-  padding: var(--space-2);
+  padding: var(--space-1);
   line-height: 1;
-  z-index: 1;
 }
 
 .detail-panel__close:hover {
