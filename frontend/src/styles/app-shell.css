@@ -199,6 +199,7 @@
 
 /* Error detail in side panel */
 .detail-errors {
+  margin-top: var(--space-8);
   margin-bottom: var(--space-4);
   padding: var(--space-3);
   background: rgba(231, 76, 60, 0.1);
