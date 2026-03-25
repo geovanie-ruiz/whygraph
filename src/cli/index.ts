@@ -4,7 +4,7 @@ import { Command } from "commander";
 import { registerConfigCommand } from "./commands/config.js";
 import { registerDownCommand } from "./commands/down.js";
 import { registerInitCommand } from "./commands/init.js";
-
+import { registerIssuesCommand } from "./commands/issues.js";
 import { registerRestartCommand } from "./commands/restart.js";
 import { registerServeCommand } from "./commands/serve.js";
 import { registerStatusCommand } from "./commands/status.js";
@@ -22,7 +22,7 @@ program
 registerConfigCommand(program);
 registerDownCommand(program);
 registerInitCommand(program);
-
+registerIssuesCommand(program);
 registerRestartCommand(program);
 registerServeCommand(program);
 registerStatusCommand(program);

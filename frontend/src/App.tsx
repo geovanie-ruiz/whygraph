@@ -19,6 +19,7 @@ import { StaleRefBadge } from "./components/StaleRefBadge.js";
 import { Header } from "./components/Header.js";
 import { Footer } from "./components/Footer.js";
 import { MenuDropdown } from "./components/MenuDropdown.js";
+import { ErrorBanner, useValidationErrors } from "./components/ErrorBanner.js";
 import "./styles/app-shell.css";
 
 function EntityDashboard() {
@@ -73,6 +74,10 @@ function EntityDashboard() {
   }, []);
 
   const selectedEntity = selectedEntityId ? entities.get(selectedEntityId) ?? null : null;
+
+  const entityIdSet = useMemo(() => new Set(entities.keys()), [entities]);
+  const { nodeErrors, generalErrors } = useValidationErrors(entityIdSet);
+  const selectedEntityErrors = selectedEntityId ? nodeErrors.get(selectedEntityId) : undefined;
 
   const storeValue = useMemo(
     () => ({ entities, connected }),
@@ -141,16 +146,21 @@ function EntityDashboard() {
           />
         </Header>
         <div className="app-graph-area">
+          {generalErrors.length > 0 && (
+            <ErrorBanner generalErrors={generalErrors} />
+          )}
           <GraphView
             entities={filteredEntities}
             onSelect={handleSelect}
             highlightedIds={gapIds}
             staleRefIds={staleRefIds}
+            errorIds={new Set(nodeErrors.keys())}
           />
           <DetailPanel
             entity={selectedEntity}
             entities={entities}
             onClose={() => setSelectedEntityId(null)}
+            errors={selectedEntityErrors}
           />
         </div>
         <Footer

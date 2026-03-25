@@ -21,6 +21,7 @@ export interface GraphViewProps {
   onSelect: (entityId: string) => void;
   highlightedIds?: Set<string>;
   staleRefIds?: Set<string>;
+  errorIds?: Set<string>;
 }
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -130,7 +131,7 @@ function getThemeColor(varName: string, fallback: string): string {
   return value || fallback;
 }
 
-export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: GraphViewProps) {
+export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, errorIds }: GraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
   const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
@@ -326,8 +327,21 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
       .selectAll<SVGGElement, GraphNode>("g.node-group");
 
     allNodes.select(".gap-highlight").remove();
+    allNodes.select(".error-ring").remove();
     allNodes.select(".stale-ref-badge").remove();
     allNodes.select(".stale-ref-badge-text").remove();
+
+    if (errorIds && errorIds.size > 0) {
+      allNodes
+        .filter((d) => errorIds.has(d.id))
+        .append("circle")
+        .attr("class", "error-ring")
+        .attr("r", (d) => nodeRadius(d.label) + 6)
+        .attr("fill", "none")
+        .attr("stroke", "#e74c3c")
+        .attr("stroke-width", 2.5)
+        .attr("opacity", 0.9);
+    }
 
     if (highlightedIds && highlightedIds.size > 0) {
       allNodes
@@ -365,7 +379,7 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         .attr("pointer-events", "none")
         .text("!");
     }
-  }, [highlightedIds, staleRefIds]);
+  }, [highlightedIds, staleRefIds, errorIds]);
 
   return (
     <svg

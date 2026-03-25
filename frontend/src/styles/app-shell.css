@@ -196,6 +196,43 @@
   border-radius: var(--radius);
 }
 
+/* Error detail in side panel */
+.detail-errors {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: var(--radius);
+}
+
+.detail-errors__status {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: #e74c3c;
+  margin-bottom: var(--space-2);
+}
+
+.detail-errors__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.detail-errors__item {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  padding: var(--space-1) 0;
+}
+
+.detail-errors__item strong {
+  display: inline;
+  font-size: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-primary);
+}
+
 /* Footer */
 .app-footer {
   display: flex;

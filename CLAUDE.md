@@ -5,6 +5,7 @@ The role of this file is to describe common mistakes and confusion points that a
 **Do not update this file without explicit approval from the developer.** If you believe a change to CLAUDE.md is warranted, propose the change and wait for confirmation before writing it.
 
 <!-- whygraph:start -->
+
 ## Whygraph — Decision Capture
 
 Before writing, modifying, or deleting production code, capture any non-trivial
@@ -14,6 +15,7 @@ benefit from knowing why the choice was made.
 ### Recognition Heuristic
 
 Scan your output for these signals:
+
 - Choosing between alternatives
 - Rejecting an approach
 - Setting a convention or pattern
@@ -67,6 +69,7 @@ If the server is unreachable, write decision files directly to `.whygraph/graph/
 
 Run `whygraph status` to check if the server is running.
 Run `whygraph up` to start the server.
+
 <!-- whygraph:end -->
 
 ## Conventions

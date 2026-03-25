@@ -4,10 +4,17 @@ import type {
   DecisionNodeEntity,
 } from "../lib/store.js";
 
+interface ValidationError {
+  field: string;
+  message: string;
+  severity: string;
+}
+
 export interface DetailPanelProps {
   entity: Entity | null;
   entities: Map<string, Entity>;
   onClose: () => void;
+  errors?: ValidationError[];
 }
 
 function isStructural(e: Entity): e is StructuralNodeEntity {
@@ -128,7 +135,22 @@ function StructuralDetail({ entity }: { entity: StructuralNodeEntity }) {
   );
 }
 
-export function DetailPanel({ entity, entities, onClose }: DetailPanelProps) {
+function ErrorDetail({ errors }: { errors: ValidationError[] }) {
+  return (
+    <div className="detail-errors">
+      <div className="detail-errors__status">Status: error</div>
+      <ul className="detail-errors__list">
+        {errors.map((err, i) => (
+          <li key={i} className="detail-errors__item">
+            <strong>{err.field}:</strong> {err.message}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function DetailPanel({ entity, entities, onClose, errors }: DetailPanelProps) {
   const isOpen = entity !== null;
 
   return (
@@ -151,6 +173,7 @@ export function DetailPanel({ entity, entities, onClose }: DetailPanelProps) {
           >
             ×
           </button>
+          {errors && errors.length > 0 && <ErrorDetail errors={errors} />}
           {isDecision(entity) ? (
             <DecisionDetail entity={entity} entities={entities} />
           ) : isStructural(entity) ? (
