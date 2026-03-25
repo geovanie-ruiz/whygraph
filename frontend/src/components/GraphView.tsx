@@ -6,6 +6,16 @@ import type {
   DecisionNodeEntity,
 } from "../lib/store.js";
 
+function mulberry32(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export interface GraphViewProps {
   entities: Map<string, Entity>;
   onSelect: (entityId: string) => void;
@@ -136,7 +146,6 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
     g.select(".nodes").selectAll<SVGTextElement, GraphNode>("text").attr("fill", labelColor);
   }, []);
 
-  // One-time SVG setup: zoom, container group
   useEffect(() => {
     if (!svgRef.current || initializedRef.current) return;
     initializedRef.current = true;
@@ -148,7 +157,6 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
     const g = svg.append("g");
     gRef.current = g;
 
-    // Zoom behavior
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
@@ -158,12 +166,10 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
 
     svg.call(zoom as never);
 
-    // Create layer groups (persistent, not recreated)
     g.append("g").attr("class", "links");
     g.append("g").attr("class", "nodes");
   }, []);
 
-  // ResizeObserver: update viewBox and recenter when container resizes
   useEffect(() => {
     const svgEl = svgRef.current;
     if (!svgEl) return;
@@ -174,17 +180,6 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         if (width > 0 && height > 0) {
           sizeRef.current = { width, height };
           d3.select(svgEl).attr("viewBox", `0 0 ${width} ${height}`);
-          const sim = simulationRef.current;
-          if (sim) {
-            // Update centering targets and unpin nodes so they can readjust
-            sim.force("x", d3.forceX(width / 2).strength(0.1));
-            sim.force("y", d3.forceY(height / 2).strength(0.1));
-            for (const n of sim.nodes()) {
-              n.fx = null;
-              n.fy = null;
-            }
-            sim.alpha(0.05).restart();
-          }
         }
       }
     });
@@ -193,11 +188,8 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
     return () => observer.disconnect();
   }, []);
 
-  // Watch for theme changes and update label colors
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      updateLabelColors();
-    });
+    const observer = new MutationObserver(() => updateLabelColors());
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-theme"],
@@ -205,68 +197,45 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
     return () => observer.disconnect();
   }, [updateLabelColors]);
 
-  // Update graph data when entities change — WITHOUT tearing down the simulation
   useEffect(() => {
     const g = gRef.current;
     if (!g || !svgRef.current) return;
 
     const { width, height } = sizeRef.current;
     const { nodes: newNodes, links: newLinks } = deriveGraphData(entities);
-
-    // Preserve positions from existing simulation nodes
-    const oldSim = simulationRef.current;
-    const oldPositions = new Map<string, { x: number; y: number }>();
-    if (oldSim) {
-      for (const n of oldSim.nodes()) {
-        if (n.x != null && n.y != null) {
-          oldPositions.set(n.id, { x: n.x, y: n.y });
-        }
-      }
-      oldSim.stop();
-    }
-
-    // Apply old positions to new nodes; new nodes start at center
     const cx = width / 2;
     const cy = height / 2;
+    const random = mulberry32(42);
+
     for (const n of newNodes) {
-      const old = oldPositions.get(n.id);
-      if (old) {
-        n.x = old.x;
-        n.y = old.y;
+      if (n.label === "App") {
+        n.x = cx;
+        n.y = cy;
+        n.fx = cx;
+        n.fy = cy;
       } else {
-        // Seed at center with tiny jitter so charge can differentiate them
-        n.x = cx + (Math.random() - 0.5) * 2;
-        n.y = cy + (Math.random() - 0.5) * 2;
+        n.x = cx + (random() - 0.5) * 20;
+        n.y = cy + (random() - 0.5) * 20;
       }
     }
 
-    // Simulation: nodes unfurl from center via charge repulsion.
-    // forceX/forceY keep the graph centered (unlike forceCenter, they work
-    // through velocity so they respect alpha decay and don't fight at rest).
-    // When alpha drops low enough, we pin all nodes (set fx/fy) for a dead stop.
     const simulation = d3
       .forceSimulation<GraphNode>(newNodes)
+      .randomSource(d3.randomLcg(42))
       .force(
         "link",
         d3.forceLink<GraphNode, GraphLink>(newLinks).id((d) => d.id).distance(180),
       )
-      .force("charge", d3.forceManyBody().strength(-800))
+      .force("charge", d3.forceManyBody().strength(-1200))
       .force("x", d3.forceX(cx).strength(0.1))
       .force("y", d3.forceY(cy).strength(0.1))
       .force("collide", d3.forceCollide().radius(40))
-      .alphaDecay(0.028)
+      .alphaDecay(0.012)
       .alphaMin(0.001)
-      .alphaTarget(0)
       .velocityDecay(0.6);
-
-    // If we had old positions, start cooler (don't re-explode the layout)
-    if (oldPositions.size > 0) {
-      simulation.alpha(0.15);
-    }
 
     simulationRef.current = simulation;
 
-    // --- UPDATE LINKS ---
     const linkSelection = g
       .select<SVGGElement>(".links")
       .selectAll<SVGLineElement, GraphLink>("line")
@@ -274,16 +243,14 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
 
     linkSelection.exit().remove();
 
-    const linkEnter = linkSelection
+    const allLinks = linkSelection
       .enter()
       .append("line")
       .attr("stroke-width", 1.5)
       .attr("stroke", (d) => linkStroke(d.type).color)
-      .attr("stroke-dasharray", (d) => linkStroke(d.type).dash);
+      .attr("stroke-dasharray", (d) => linkStroke(d.type).dash)
+      .merge(linkSelection);
 
-    const allLinks = linkEnter.merge(linkSelection);
-
-    // --- UPDATE NODES ---
     const nodeSelection = g
       .select<SVGGElement>(".nodes")
       .selectAll<SVGGElement, GraphNode>("g.node-group")
@@ -297,7 +264,6 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
       .attr("class", "node-group")
       .attr("cursor", "pointer");
 
-    // Draw shapes on enter
     nodeEnter.each(function (d) {
       const el = d3.select(this);
       if (d.label === "Decision") {
@@ -321,7 +287,6 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
           .attr("stroke-width", 1.5);
       }
 
-      // Label
       el.append("text")
         .attr("dy", nodeRadius(d.label) + 14)
         .attr("text-anchor", "middle")
@@ -333,7 +298,33 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
 
     const allNodes = nodeEnter.merge(nodeSelection);
 
-    // --- HIGHLIGHTS (reapply on every update) ---
+    allNodes.on("click", (_event, d) => {
+      onSelectRef.current(d.id);
+    });
+
+    simulation.on("tick", () => {
+      allLinks
+        .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
+        .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
+        .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
+        .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
+
+      allNodes.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
+    });
+
+    return () => {
+      simulation.stop();
+    };
+  }, [entities]);
+
+  useEffect(() => {
+    const g = gRef.current;
+    if (!g) return;
+
+    const allNodes = g
+      .select<SVGGElement>(".nodes")
+      .selectAll<SVGGElement, GraphNode>("g.node-group");
+
     allNodes.select(".gap-highlight").remove();
     allNodes.select(".stale-ref-badge").remove();
     allNodes.select(".stale-ref-badge-text").remove();
@@ -374,65 +365,7 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds }: G
         .attr("pointer-events", "none")
         .text("!");
     }
-
-    // --- DRAG (with click detection) ---
-    // --- DRAG (with click detection) ---
-    let dragged = false;
-    const drag = d3
-      .drag<SVGGElement, GraphNode>()
-      .on("start", (event, d) => {
-        dragged = false;
-        // Unpin all nodes so the layout can react to the drag
-        for (const n of simulation.nodes()) {
-          n.fx = null;
-          n.fy = null;
-        }
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
-      })
-      .on("drag", (event, d) => {
-        dragged = true;
-        d.fx = event.x;
-        d.fy = event.y;
-      })
-      .on("end", (event, d) => {
-        if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
-        if (!dragged) {
-          onSelectRef.current(d.id);
-        }
-      });
-
-    allNodes.call(drag);
-
-    // --- TICK (with pin-on-settle) ---
-    simulation.on("tick", () => {
-      allLinks
-        .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
-        .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
-        .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
-        .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
-
-      allNodes.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
-
-      // Once alpha is low, pin every node at its current position and stop.
-      // Pinned nodes (fx/fy set) are immovable — zero drift guaranteed.
-      // Drag start unpins them so the layout can still react to interaction.
-      if (simulation.alpha() < 0.03) {
-        for (const n of simulation.nodes()) {
-          n.fx = n.x;
-          n.fy = n.y;
-        }
-        simulation.stop();
-      }
-    });
-
-    return () => {
-      simulation.stop();
-    };
-  }, [entities, highlightedIds, staleRefIds]);
+  }, [highlightedIds, staleRefIds]);
 
   return (
     <svg

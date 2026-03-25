@@ -30,12 +30,10 @@ export function MenuDropdown({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open, onClose]);
 
-  if (!open) return null;
-
   return (
     <>
-      <div className="menu-backdrop" onClick={onClose} />
-      <div className="menu-dropdown">
+      {open && <div className="menu-backdrop" onClick={onClose} />}
+      <div className="menu-dropdown" style={{ display: open ? undefined : "none" }}>
         <div className="menu-section">
           <div className="menu-section__title">Theme</div>
           <ThemeToggle />
