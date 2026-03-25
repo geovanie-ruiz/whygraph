@@ -1,11 +1,11 @@
 ---
 # whygraph-imsm
 title: Rewrite platform instruction delivery
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-25T03:55:20Z
-updated_at: 2026-03-25T03:55:20Z
+updated_at: 2026-03-25T05:09:01Z
 parent: whygraph-rqnp
 ---
 

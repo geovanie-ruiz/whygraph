@@ -11,7 +11,6 @@ import type {
   StructuralNode,
 } from "../../entity/types.js";
 import { DECISION_TAGS } from "../../entity/types.js";
-import { runPrime } from "./prime.js";
 import { writePlatformRules } from "../../platform/rules.js";
 
 // ============================================================
@@ -127,9 +126,8 @@ export async function runInit(
 
   const { filePath: appNodePath } = writeEntity(graphDir, appNode);
 
-  // Write platform-specific rules
-  const primeOutput = runPrime(targetDir);
-  const platformResult = writePlatformRules(targetDir, environment, primeOutput);
+  // Write platform-specific rules and register MCP server
+  const platformResult = writePlatformRules(targetDir, environment, "", config);
 
   return { configPath, appNodePath, appId, platformRulesPath: platformResult.filePath };
 }
