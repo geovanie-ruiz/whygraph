@@ -2,9 +2,7 @@
 
 **The graph of why. So your agent knows before it touches anything.**
 
-Whygraph is a developer tool that captures the architectural rationale behind your codebase — the decisions, tradeoffs, and rejected alternatives — and makes it queryable by AI agents before they write a single line.
-
-It integrates with your development environment to teach agents how to recognize and record decisions as they work, so the _why_ behind your architecture is never lost.
+Whygraph captures the architectural rationale behind your codebase — the decisions, tradeoffs, and rejected alternatives — and makes it queryable by AI agents before they write a single line.
 
 ---
 
@@ -14,17 +12,11 @@ You're vibe-coding. The agent is fast. Features ship in minutes. Then three sess
 
 This isn't a hallucination problem. It's a memory problem. The agent isn't wrong. It just doesn't know the why.
 
-Your CLAUDE.md has conventions. Your task tracker has tickets. Your codebase has structure. But none of them carry rationale. None of them answer the question an agent actually needs answered before acting:
-
-> _Why is this shaped the way it is, and what did we try before this?_
-
-That's what Whygraph is for.
-
 ---
 
 ## What It Is
 
-Whygraph is a **decision graph** — an append-only event log stored as `.whygraph/events.jsonl` in your repo, projected at runtime into a queryable graph. It models your application as a hierarchy of nodes (app → features → components) with decisions attached to the nodes they affect.
+Whygraph is a **decision graph** — markdown files with YAML frontmatter stored in `.whygraph/graph/`, projected at runtime into a queryable graphology graph. It models your application as a hierarchy of nodes (app → features → components) with decisions attached to the nodes they affect.
 
 ```text
 App: MyProject
@@ -43,92 +35,102 @@ Every decision records context (why it was needed), the choice made, tradeoffs a
 
 ---
 
-## Platform Integration
-
-Whygraph is **platform-agnostic**. It's distributed as an npm package and works with any AI development environment. When installed in a supported environment, it integrates deeply with that platform's agent infrastructure.
-
-**Claude Code** gets first-class integration: session hooks for automatic sync, skills for codebase scanning and decision interviews, and a durable instruction pointer via SessionStart hooks. Whygraph functions as a Claude Code plugin in this environment.
-
-**Cursor, Copilot, and other environments** get baseline integration: pointer files in the platform's instruction location (`.cursor/rules/`, `.github/copilot-instructions.md`), git hooks for sync on commit, and prompt files for scan/interview workflows.
-
-**Unsupported environments** get the agnostic baseline: `.whygraph/INSTRUCTIONS.md` contains the full decision framework, and `whygraph init` tells the developer how to configure their agent to read it before modifying code.
-
-The architecture supports equal integration depth on any platform. Claude Code is deepest because it's where development started — other platforms will get deeper integration over time.
-
-| Platform    | Instruction Delivery              | Sync Trigger        | Durability                         |
-| ----------- | --------------------------------- | ------------------- | ---------------------------------- |
-| Claude Code | SessionStart hook                 | Hook on session end | Durable — independent of CLAUDE.md |
-| Cursor      | `.cursor/rules/whygraph.md`       | Git hook on commit  | Developer must preserve            |
-| Copilot     | `.github/copilot-instructions.md` | Git hook on commit  | Developer must preserve            |
-| Other       | Manual configuration              | Manual CLI          | Developer manages                  |
-
----
-
-## How It Works
-
-### Architecture: Event Sourcing + Graph Projection
-
-The event log (`.whygraph/events.jsonl`) is the append-only source of truth. Every graph mutation — adding a node, creating an edge, patching a property — is a timestamped event. The runtime graph is a `graphology.MultiDirectedGraph` rebuilt by replaying the event log on every read.
-
-This means temporal replay is free: `buildGraphAt(events, cutoff)` replays a subset of events to show the graph at any point in history.
-
-### Decision Capture
-
-Agents capture decisions as they work. `.whygraph/INSTRUCTIONS.md` teaches agents to recognize decisions — not just explicit forks ("should I use X or Y?") but also:
-
-- Conventions followed that a future agent might not know
-- Configuration choices that exclude alternatives
-- Data modeling decisions with downstream consequences
-- Deliberate omissions (choosing NOT to do something)
-- Inventions not in the requirements
-
-The instructions are directive: "Write a staging entry for every architectural choice." Agents write structured entries to `.whygraph/staging/` which are processed into events by `whygraph sync`.
-
-### The MCP Server
-
-Whygraph exposes 5 read-only MCP tools:
-
-| Tool                              | Description                                                   |
-| --------------------------------- | ------------------------------------------------------------- |
-| `whygraph_context(file, symbol?)` | Get decisions and constraints for code you're about to modify |
-| `whygraph_get_decisions(filters)` | Query decisions by status, tags, date range                   |
-| `whygraph_get_gaps(limit?)`       | Find areas with no recorded decisions                         |
-| `whygraph_get_reviews()`          | Get pending supersede candidates                              |
-| `whygraph_get_errors()`           | Get failed staging entries                                    |
-
-All writes go through staging files — the MCP server is read-only.
-
-### The Visualization
-
-`whygraph viz` generates a self-contained HTML file with an interactive force-directed D3 graph. Timeline scrubber replays the architecture's evolution. Tag filtering slices by concern (arch, data, security, performance, integration, infra, ux). Focus+context navigation lets you drill into any subtree. Side panels show full decision details.
-
-The HTML works offline, opens via `file://`, and is committable to the repo.
-
----
-
 ## Getting Started
 
 ```bash
 npm install --save-dev whygraph
 npx whygraph init
+npx whygraph up
 ```
 
-`whygraph init` walks you through environment selection and creates the `.whygraph/` directory with all required files. It configures platform-specific hooks and instruction delivery based on your environment.
+`whygraph init` walks you through environment selection, creates the `.whygraph/` directory, registers the MCP server, and writes agent instructions to CLAUDE.md (Claude Code) or AGENTS.md (all other platforms).
 
-After init, run `/whygraph-scan` in your agent to map your codebase's feature/component structure. Then run `/whygraph-interview` to capture historical decisions from your mental model.
+`whygraph up` starts the server in the background. The server watches `.whygraph/graph/` for changes, maintains an in-memory graph, and serves the GraphQL API and frontend visualization.
 
 From there, agents capture decisions automatically as they work.
+
+---
+
+## Platform Integration
+
+Whygraph is **platform-agnostic**. It works with any AI development environment.
+
+| Platform    | Instruction Delivery | MCP Server | Agent Instructions |
+| ----------- | -------------------- | ---------- | ------------------ |
+| Claude Code | CLAUDE.md            | Auto-registered in `.claude/settings.json` | Full MCP tool access |
+| Cursor      | AGENTS.md            | Manual configuration | Direct file writes |
+| Copilot     | AGENTS.md            | Manual configuration | Direct file writes |
+| Other       | AGENTS.md            | Manual configuration | Direct file writes |
+
+**Claude Code** gets the deepest integration: MCP server auto-registration, write tools in strict mode with fallback to direct file writes, and instructions baked into CLAUDE.md.
+
+**All other platforms** get instructions in AGENTS.md (the emerging cross-tool standard). Decision capture works via direct file writes to `.whygraph/graph/`.
+
+---
+
+## How It Works
+
+### Decision Capture
+
+Agents capture decisions as they work. The instructions in CLAUDE.md / AGENTS.md teach agents to recognize decisions — not just explicit forks ("should I use X or Y?") but also conventions, configuration choices, deliberate omissions, and tradeoffs.
+
+**MCP Mode (strict):** Agent calls MCP tools → server validates → writes to disk. If the server is unreachable, falls back to direct file writes.
+
+**Default mode:** Agent writes decision files directly to `.whygraph/graph/`. The file watcher picks them up, validates, and creates issue sidecars for any problems.
+
+### The Server
+
+The whygraph server is a long-running process that:
+- Watches `.whygraph/graph/` for file changes (chokidar, 100ms debounce)
+- Maintains an in-memory graphology graph
+- Serves a GraphQL API (queries, mutations, subscriptions via WebSocket)
+- Serves a React frontend with D3 force-directed graph visualization
+- Detects and watches git worktrees for multi-agent support
+- Reconciles entity validation issues on startup and per file change
+
+### Issue Sidecars
+
+When an entity has validation problems (bad refs, missing fields, schema violations), whygraph creates a JSON sidecar in `.whygraph/issues/<entity-id>.json`. The entity data is preserved — issues are tracked separately. On startup, the server reconciles all issues: creating sidecars for problems, deleting them when entities pass validation.
+
+### The MCP Server
+
+Whygraph exposes MCP tools for agent integration:
+
+| Tool | Description |
+| ---- | ----------- |
+| `whygraph_context(file, symbol?)` | Get decisions for code you're about to modify |
+| `whygraph_get_decisions(filters)` | Query decisions by status, tags, date range |
+| `whygraph_get_gaps(limit?)` | Find areas with no recorded decisions |
+| `whygraph_list_nodes(filters)` | List structural nodes |
+| `whygraph_create_decision(...)` | Create a decision (strict mode) |
+| `whygraph_create_node(...)` | Create a structural node (strict mode) |
+
+Write tools are available in strict mode (`WHYGRAPH_MCP_MODE=strict`). They validate before writing and fall back to direct file writes if the server is unreachable.
+
+### The Visualization
+
+`whygraph viz` opens a browser to the frontend at `http://localhost:4777`. The visualization features:
+- D3 force-directed graph with deterministic seeded layout
+- App node pinned at center, everything radiates outward
+- Live updates via WebSocket subscriptions
+- Timeline scrubber for temporal projection
+- Tag filtering, gap highlighting, stale ref badges
+- Theme toggle (dark/light)
 
 ---
 
 ## CLI
 
 ```bash
-whygraph init              # Set up whygraph for your project
-whygraph sync [--flush]    # Process staging files into events
-whygraph viz [--no-open]   # Generate the visualization
-whygraph config --flag val # Modify preferences
-whygraph mcp               # Start the MCP stdio server
+whygraph init                    # Set up whygraph for your project
+whygraph up                      # Start the server in the background
+whygraph down                    # Stop the server
+whygraph restart                 # Stop and restart the server
+whygraph status                  # Check server status and entity counts
+whygraph viz [--no-open]         # Open the visualization
+whygraph config [--flag val]     # View or modify configuration
+whygraph validate                # Validate all entities
+whygraph mcp                     # Start the MCP stdio server
 ```
 
 ---
@@ -137,7 +139,7 @@ whygraph mcp               # Start the MCP stdio server
 
 **Node Types**: `App`, `Feature`, `Component`, `Decision`
 
-**Edge Types**: `COMPOSES` (structural hierarchy), `AFFECTS` (decision → node), `SUPERSEDES` (decision → decision), `DEPRECATES` (node → node)
+**Edge Types**: `COMPOSES` (structural hierarchy), `AFFECTS` (decision → node), `SUPERSEDES` (decision → decision)
 
 **Decision Properties**: title, date, context, decision, tradeoffs, alternatives, status, affects, tags
 
@@ -145,25 +147,31 @@ whygraph mcp               # Start the MCP stdio server
 
 ---
 
-## Design Principles
+## Multi-Agent / Worktree Support
 
-**The why is not in the code.** You can read a codebase and understand what it does. You cannot read it and understand what was tried before, what was rejected, and what trade-offs were accepted. That knowledge decays across sessions and disappears when an agent starts fresh.
-
-**Decisions, not documentation.** Whygraph captures structured decision records — context, choice, tradeoffs, alternatives — not prose. This structure is what makes decisions queryable and visualizable.
-
-**Append-only.** The history is the product. Superseded decisions stay in the graph. They explain the path, not just the destination.
-
-**Repo-native.** The graph lives in your repo, versioned with your code. No external service, no account required.
-
-**Agent-first.** The MCP interface and INSTRUCTIONS.md are the primary interfaces. The CLI and visualization exist so humans can inspect what agents will read.
-
-**Platform-agnostic.** Whygraph works with any AI development environment. Deep integration with specific platforms is additive, not required.
+Whygraph runs one server per repo, watching all git worktrees. When agents work in separate worktrees:
+- Each worktree's `.whygraph/graph/` is watched independently
+- ETag-based dirty tracking detects divergence from the main graph
+- Entity IDs use NanoIDs to prevent collisions across concurrent agents
+- Conflict resolution happens at git merge time (standard git workflow)
 
 ---
 
-## Status
+## Design Principles
 
-Early development. Core architecture (event log, projection, types) is implemented. Staging pipeline, CLI, MCP server, and visualization are in progress.
+**The why is not in the code.** You can read a codebase and understand what it does. You cannot read it and understand what was tried before, what was rejected, and what trade-offs were accepted.
+
+**Decisions, not documentation.** Structured decision records — context, choice, tradeoffs, alternatives — not prose. This structure is what makes decisions queryable.
+
+**Append-only.** Superseded decisions stay in the graph. They explain the path, not just the destination.
+
+**Repo-native.** The graph lives in your repo, versioned with your code. No external service, no account required.
+
+**Agent-first.** The MCP interface and CLAUDE.md/AGENTS.md instructions are the primary interfaces. The CLI and visualization exist so humans can inspect what agents will read.
+
+**Never lose data.** Entity files are always written, even if validation fails. Issues are tracked in sidecars, not by rejecting writes.
+
+**Platform-agnostic.** Whygraph works with any AI development environment. Deep integration with specific platforms is additive, not required.
 
 ---
 

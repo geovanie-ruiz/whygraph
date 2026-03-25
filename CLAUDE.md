@@ -4,11 +4,70 @@ The role of this file is to describe common mistakes and confusion points that a
 
 **Do not update this file without explicit approval from the developer.** If you believe a change to CLAUDE.md is warranted, propose the change and wait for confirmation before writing it.
 
-<!-- BEGIN WHYGRAPH INTEGRATION -->
-## Decision Capture
+<!-- whygraph:start -->
+## Whygraph — Decision Capture
 
-Before writing, modifying, or deleting code, run `whygraph prime`.
-<!-- END WHYGRAPH INTEGRATION -->
+Before writing, modifying, or deleting production code, capture any non-trivial
+decision as a Decision node. A decision is non-trivial if a junior engineer would
+benefit from knowing why the choice was made.
+
+### Recognition Heuristic
+
+Scan your output for these signals:
+- Choosing between alternatives
+- Rejecting an approach
+- Setting a convention or pattern
+- Adding, removing, or changing a dependency
+- Configuring infrastructure or deployment
+- Making a security or performance tradeoff
+- Altering user-facing behavior
+- Scoping to production code the agent authored
+- Establishing an invariant or constraint
+
+### Decision File Format
+
+Write decision files to `.whygraph/graph/` with YAML frontmatter:
+
+```yaml
+---
+id: wg-<4-char-nanoid>
+label: Decision
+title: <short title>
+status: active
+date: <YYYY-MM-DD>
+affects:
+  - <entity-id>
+tags:
+  - <one of: arch, data, security, performance, integration, infra, ux>
+created_at: <ISO 8601>
+updated_at: <ISO 8601>
+---
+
+## Context
+<why this decision was needed>
+
+## Decision
+<what was decided>
+
+## Tradeoffs
+<what was gained and lost>
+
+## Alternatives
+<what was considered and rejected>
+```
+
+Allowed tags: arch, data, security, performance, integration, infra, ux
+
+### MCP Server
+
+Use the `whygraph` MCP server for decision capture tools.
+If the server is unreachable, write decision files directly to `.whygraph/graph/`.
+
+### Server Status
+
+Run `whygraph status` to check if the server is running.
+Run `whygraph up` to start the server.
+<!-- whygraph:end -->
 
 ## Conventions
 
@@ -20,26 +79,18 @@ Before writing, modifying, or deleting code, run `whygraph prime`.
 - All CLI commands must accept `--json` for programmatic output
 - Error handling: core functions throw typed errors, CLI catches and formats for humans, MCP catches and formats per protocol
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
+## Beans Issue Tracker
 
-## Beads Issue Tracker
-
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+This project uses **beans** for issue tracking.
 
 ### Quick Reference
 
 ```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
+beans list              # See all work
+beans show <id>         # View issue details
+beans update <id> --status in-progress  # Claim work
+beans update <id> --status completed    # Complete work
 ```
-
-### Rules
-
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
 ## Session Completion
 
@@ -47,14 +98,13 @@ bd close <id>         # Complete work
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **File issues for remaining work** - Create beans for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
 
    ```bash
    git pull --rebase
-   bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -69,4 +119,3 @@ bd close <id>         # Complete work
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
