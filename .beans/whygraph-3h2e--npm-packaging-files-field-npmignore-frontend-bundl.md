@@ -1,11 +1,11 @@
 ---
 # whygraph-3h2e
 title: 'npm packaging: files field, .npmignore, frontend bundling'
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-25T03:55:20Z
-updated_at: 2026-03-25T03:55:20Z
+updated_at: 2026-03-25T05:06:14Z
 parent: whygraph-rqnp
 ---
 
