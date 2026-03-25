@@ -47,9 +47,7 @@ function isValidStructuralLabel(label: string): label is StructuralLabel {
   return STRUCTURAL_LABELS.has(label);
 }
 
-function isValidDecisionTag(tag: string): tag is DecisionTag {
-  return (DECISION_TAGS as readonly string[]).includes(tag);
-}
+
 
 function parseStructuralNode(
   data: Record<string, unknown>,
@@ -140,7 +138,7 @@ function parseDecisionNode(
   if (status !== "active" && status !== "superseded") return null;
 
   const validAffects = affects.filter((a): a is string => typeof a === "string");
-  const validTags = tags.filter((t): t is DecisionTag => typeof t === "string" && isValidDecisionTag(t));
+  const rawTags = tags.filter((t): t is string => typeof t === "string");
 
   const sections = parseSections(body);
 
@@ -151,7 +149,7 @@ function parseDecisionNode(
     status: status as DecisionStatus,
     date: String(date),
     affects: validAffects,
-    tags: validTags,
+    tags: rawTags as DecisionTag[],
     context: sections.get("context") ?? "",
     decision: sections.get("decision") ?? "",
     tradeoffs: sections.get("tradeoffs") ?? "",

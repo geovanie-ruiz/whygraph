@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import type { Command } from "commander";
 import prompts from "prompts";
-import { listIssues } from "../../entity/issues.js";
+import { listIssues, deleteIssue } from "../../entity/issues.js";
 import type { EntityIssue } from "../../entity/issues.js";
 import { parseEntity } from "../../entity/parser.js";
 import { writeEntity } from "../../entity/writer.js";
@@ -213,6 +213,7 @@ async function resolveIssueInteractively(
   issue: EntityIssue,
   entities: Map<string, Entity>,
   graphDir: string,
+  whygraphDir: string,
 ): Promise<void> {
   const entity = entities.get(issue.entityId);
   if (!entity) {
@@ -220,17 +221,22 @@ async function resolveIssueInteractively(
     return;
   }
 
+  let resolved = false;
   for (const err of issue.errors) {
     if (err.field === "parent" && isStructuralNode(entity)) {
-      await resolveParentInteractively(entity, entities, graphDir);
+      if (await resolveParentInteractively(entity, entities, graphDir)) resolved = true;
     } else if (err.field === "date" && isDecisionNode(entity)) {
-      await resolveDateInteractively(entity, graphDir);
+      if (await resolveDateInteractively(entity, graphDir)) resolved = true;
     } else if (err.field === "tags" && isDecisionNode(entity)) {
       const match = err.message.match(/invalid tag "([^"]+)"/);
       if (match) {
-        await resolveTagInteractively(entity, match[1], graphDir);
+        if (await resolveTagInteractively(entity, match[1], graphDir)) resolved = true;
       }
     }
+  }
+
+  if (resolved) {
+    deleteIssue(whygraphDir, issue.entityId);
   }
 }
 
@@ -311,8 +317,9 @@ export function registerIssuesCommand(program: Command): void {
 
           const entities = loadEntitiesFromDisk(graphDir);
 
+          const whygraphDir = join(projectDir, ".whygraph");
           for (const issue of cliIssues) {
-            await resolveIssueInteractively(issue, entities, graphDir);
+            await resolveIssueInteractively(issue, entities, graphDir, whygraphDir);
           }
         }
       } catch (err: unknown) {
