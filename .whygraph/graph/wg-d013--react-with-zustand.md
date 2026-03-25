@@ -9,7 +9,7 @@ affects:
   - wg-apsh
   - wg-gviz
 tags:
-  - frontend
+  - ux
   - arch
 created_at: "2026-03-24T15:00:00Z"
 updated_at: "2026-03-24T15:00:00Z"

@@ -1,11 +1,11 @@
 ---
 # whygraph-7fau
 title: Normalize canonical tag list and fix generated entities
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-25T03:55:20Z
-updated_at: 2026-03-25T03:55:20Z
+updated_at: 2026-03-25T04:53:56Z
 parent: whygraph-rqnp
 ---
 

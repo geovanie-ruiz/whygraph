@@ -8,8 +8,8 @@ affects:
   - wg-cmdi
   - wg-plat
 tags:
-  - convention
-  - dx
+  - arch
+  - integration
 created_at: "2026-03-24T15:00:00Z"
 updated_at: "2026-03-24T15:00:00Z"
 ---
