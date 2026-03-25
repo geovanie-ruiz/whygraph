@@ -186,7 +186,7 @@ describe("writeEntity", () => {
     const dir = makeTmpDir();
     try {
       const node = makeStructuralNode();
-      const filePath = writeEntity(dir, node);
+      const { filePath } = writeEntity(dir, node);
 
       expect(existsSync(filePath)).toBe(true);
       expect(filePath).toContain(dir);
@@ -206,7 +206,7 @@ describe("writeEntity", () => {
     try {
       expect(existsSync(dir)).toBe(false);
       const node = makeDecisionNode();
-      const filePath = writeEntity(dir, node);
+      const { filePath } = writeEntity(dir, node);
 
       expect(existsSync(filePath)).toBe(true);
       expect(filePath).toContain(dir);
@@ -219,7 +219,7 @@ describe("writeEntity", () => {
     const dir = makeTmpDir();
     try {
       const node = makeDecisionNode();
-      const filePath = writeEntity(dir, node);
+      const { filePath } = writeEntity(dir, node);
       expect(filePath).toMatch(/wg-c3d4--use-websockets-for-live-updates\.md$/);
     } finally {
       cleanup(dir);

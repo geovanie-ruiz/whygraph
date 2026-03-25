@@ -125,7 +125,7 @@ export async function runInit(
     updated_at: now,
   };
 
-  const appNodePath = writeEntity(graphDir, appNode);
+  const { filePath: appNodePath } = writeEntity(graphDir, appNode);
 
   // Write platform-specific rules
   const primeOutput = runPrime(targetDir);

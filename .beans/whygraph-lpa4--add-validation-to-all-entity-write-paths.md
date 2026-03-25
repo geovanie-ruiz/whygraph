@@ -1,11 +1,11 @@
 ---
 # whygraph-lpa4
 title: Add validation to all entity write paths
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-25T03:55:20Z
-updated_at: 2026-03-25T03:55:20Z
+updated_at: 2026-03-25T04:59:49Z
 parent: whygraph-rqnp
 ---
 

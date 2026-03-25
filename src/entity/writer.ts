@@ -3,6 +3,8 @@ import { join, dirname } from "node:path";
 import { isStructuralNode, isDecisionNode } from "./types.js";
 import type { Entity, StructuralNode, DecisionNode } from "./types.js";
 import { toFilename } from "./id.js";
+import { validateEntity } from "./validate.js";
+import type { ValidationResult } from "./validate.js";
 
 // ============================================================
 // YAML front matter rendering
@@ -152,11 +154,19 @@ export function renderEntity(entity: Entity): string {
   return renderFrontMatter(fmWithoutDesc) + renderStructuralBody(node);
 }
 
+export interface WriteEntityResult {
+  filePath: string;
+  validation: ValidationResult;
+}
+
 /**
- * Write an entity to disk as a markdown file. Returns the file path written.
+ * Write an entity to disk as a markdown file. Always writes (never loses data),
+ * but returns validation results so callers can surface issues.
  * Uses atomic write (temp file + rename). Creates parent directories if needed.
  */
-export function writeEntity(dirPath: string, entity: Entity): string {
+export function writeEntity(dirPath: string, entity: Entity): WriteEntityResult {
+  const validation = validateEntity(entity);
+
   const titleOrName = isDecisionNode(entity) ? entity.title : entity.name;
   const filename = toFilename(entity.id, titleOrName);
   const filePath = join(dirPath, filename);
@@ -168,5 +178,5 @@ export function writeEntity(dirPath: string, entity: Entity): string {
   writeFileSync(tempPath, content, "utf-8");
   renameSync(tempPath, filePath);
 
-  return filePath;
+  return { filePath, validation };
 }
