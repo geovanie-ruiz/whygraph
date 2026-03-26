@@ -25,3 +25,11 @@ Use D3 force-directed layout with deterministic seeding. Gives organic, explorab
 ## Tradeoffs
 
 Gained: natural clustering by connectivity, smooth animation possible, zero extra dependencies (D3 already used). Lost: no guaranteed top-down hierarchy, node positions vary with graph topology changes.
+
+## Alternatives
+
+**dagre**: Produces clean top-down hierarchical layouts, well-suited for tree-shaped graphs. Rejected because the whygraph structure is not a pure tree — decisions cross feature and component boundaries with AFFECTS edges, which dagre cannot express without distorting the layout. Also adds a dependency.
+
+**ELK (Eclipse Layout Kernel)**: Powerful layered graph layout engine with many algorithms. Rejected because it requires a Java or WebAssembly runtime, adds significant bundle weight, and is more complex to integrate than the problem warrants at this scale.
+
+**Manual positioning**: Let users drag and persist node positions. Rejected because it requires a position storage layer and breaks when new nodes are added, shifting everything else.

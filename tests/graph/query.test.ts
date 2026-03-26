@@ -101,7 +101,7 @@ describe("getContext", () => {
     expect(result.nodes).toHaveLength(1);
     expect(result.decisions).toHaveLength(1);
     expect(result.decisions[0].id).toBe("wg-dec1");
-    expect(result.decisions[0].attributes.title).toBe("Use JWT");
+    expect(result.decisions[0].title).toBe("Use JWT");
   });
 
   it("traverses parent chain and includes ancestor decisions", () => {

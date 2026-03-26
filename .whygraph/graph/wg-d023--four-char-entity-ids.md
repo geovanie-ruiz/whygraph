@@ -24,3 +24,11 @@ Use wg- prefix followed by 4 lowercase alphanumeric characters (e.g., wg-grph, w
 ## Tradeoffs
 
 Gained: compact IDs that fit in affects arrays, recognizable at a glance, easy to type. Lost: limited namespace (36^4 = 1.6M combinations), sequence numbers for decisions couple to creation order.
+
+## Alternatives
+
+**Full UUIDs or NanoIDs (21 chars)**: Use globally unique random identifiers. Rejected because IDs appear frequently in frontmatter affects arrays and file names. Long IDs make files harder to read, harder to type, and produce cluttered diffs. Collision probability at the scale of a single project's entity graph is negligible with 4 characters.
+
+**Sequential numeric IDs** (1, 2, 3, ...): Auto-increment IDs from a counter file. Rejected because it requires a centralized counter that creates merge conflicts in multi-agent/multi-worktree scenarios. Random character IDs allow concurrent agents to generate non-colliding IDs without coordination.
+
+**File path as the identifier**: Use the filename (without extension) as the entity ID. Rejected because it couples the ID to the file name, making rename operations break all references. A separate ID field decouples identity from storage location.

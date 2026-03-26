@@ -175,7 +175,7 @@ describe("MCP write tools (strict mode)", () => {
 
 describe("MCP write tools not registered in default mode", () => {
   it("does not register write tools when mode is not strict", async () => {
-    delete process.env["WHYGRAPH_MCP_MODE"];
+    process.env["WHYGRAPH_MCP_MODE"] = "default";
 
     const mcpServer = createMcpServer();
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();

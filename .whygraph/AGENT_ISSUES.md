@@ -1,4 +1,7 @@
-For each file, read it and its affected codebase paths, then fill in the missing sections.
+For each decision file below, read its existing content and write meaningful content for the missing sections.
+Base your additions on the context, decision, and tradeoffs already written.
+Do not write placeholder text like "None considered." or "N/A."
+The file watcher will automatically clear each issue once the missing sections are present.
 
 Missing: alternatives
 - .whygraph/graph/wg-d006--d3-force-over-dagre.md
@@ -21,6 +24,3 @@ Missing: alternatives
 - .whygraph/graph/wg-d023--four-char-entity-ids.md
 - .whygraph/graph/wg-d024--pure-functions-in-graph-engine.md
 - .whygraph/graph/wg-d025--gap-detection-via-missing-inbound-edges.md
-
-Missing: context, tradeoffs
-- .whygraph/graph/wg-tst5--agent-only-error.md

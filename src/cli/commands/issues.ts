@@ -1,8 +1,8 @@
 import { join } from "node:path";
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import type { Command } from "commander";
 import prompts from "prompts";
-import { listIssues } from "../../entity/issues.js";
+import { listIssues, deleteIssue } from "../../entity/issues.js";
 import type { EntityIssue } from "../../entity/issues.js";
 import { parseEntity } from "../../entity/parser.js";
 import { writeEntity } from "../../entity/writer.js";
@@ -209,6 +209,65 @@ async function resolveTagInteractively(
   return true;
 }
 
+async function resolveAffectsInteractively(
+  entity: DecisionNode,
+  invalidRefs: string[],
+  entities: Map<string, Entity>,
+  graphDir: string,
+): Promise<boolean> {
+  printDecisionContext(entity);
+
+  const validChoices = (Array.from(entities.values()).filter((e) => !isDecisionNode(e)) as StructuralNode[])
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((e) => ({ title: `${e.name} (${e.id})`, value: e.id }));
+
+  let anyResolved = false;
+  for (const ref of invalidRefs) {
+    const isLastRef = entity.affects.length === 1;
+    const choices = isLastRef
+      ? [{ title: "Remove ref and delete node", value: "delete" }, { title: "Replace it", value: "replace" }]
+      : [{ title: "Remove it", value: "remove" }, { title: "Replace it", value: "replace" }];
+
+    const response = await prompts({
+      type: "select",
+      name: "action",
+      message: `Invalid affects ref "${ref}". What do you want to do?`,
+      choices,
+    }, { onCancel });
+
+    if (response.action === "delete") {
+      const files = readdirSync(graphDir).filter((f) => f.startsWith(entity.id));
+      if (files.length > 0) unlinkSync(join(graphDir, files[0]));
+      const whygraphDir = join(graphDir, "..");
+      deleteIssue(whygraphDir, entity.id);
+      process.stdout.write(`  Deleted ${entity.id}\n\n`);
+      return true;
+    } else if (response.action === "remove") {
+      entity.affects = entity.affects.filter((a) => a !== ref);
+      anyResolved = true;
+    } else if (response.action === "replace") {
+      const replacement = await prompts({
+        type: "select",
+        name: "id",
+        message: `Replace "${ref}" with:`,
+        choices: validChoices,
+      }, { onCancel });
+      if (replacement.id) {
+        entity.affects = entity.affects.map((a) => (a === ref ? replacement.id : a));
+        anyResolved = true;
+      }
+    }
+  }
+
+  if (anyResolved) {
+    entity.updated_at = new Date().toISOString();
+    writeEntity(graphDir, entity);
+    process.stdout.write(`  Updated ${entity.id}: affects refs resolved\n\n`);
+  }
+
+  return anyResolved;
+}
+
 async function resolveIssueInteractively(
   issue: EntityIssue,
   entities: Map<string, Entity>,
@@ -216,8 +275,10 @@ async function resolveIssueInteractively(
 ): Promise<boolean> {
   const entity = entities.get(issue.entityId);
   if (!entity) {
-    process.stdout.write(`  Entity ${issue.entityId} not found on disk. Skipping.\n\n`);
-    return false;
+    const whygraphDir = join(graphDir, "..");
+    deleteIssue(whygraphDir, issue.entityId);
+    process.stdout.write(`  Entity ${issue.entityId} no longer exists — issue cleared.\n\n`);
+    return true;
   }
 
   let resolved = false;
@@ -231,6 +292,15 @@ async function resolveIssueInteractively(
       if (match) {
         if (await resolveTagInteractively(entity, match[1], graphDir)) resolved = true;
       }
+    } else if (err.field === "affects" && isDecisionNode(entity)) {
+      const invalidRefs = issue.errors
+        .filter((e) => e.field === "affects")
+        .map((e) => e.message.match(/affects ref "([^"]+)"/)?.[1])
+        .filter((r): r is string => r !== undefined);
+      if (invalidRefs.length > 0) {
+        if (await resolveAffectsInteractively(entity, invalidRefs, entities, graphDir)) resolved = true;
+      }
+      break; // all affects errors handled in one pass
     }
   }
 
@@ -284,7 +354,10 @@ export function registerIssuesCommand(program: Command): void {
             }
 
             const mdLines: string[] = [
-              "For each file, read it and its affected codebase paths, then fill in the missing sections.",
+              `For each decision file below, read its existing content and write meaningful content for the missing sections.`,
+              `Base your additions on the context, decision, and tradeoffs already written.`,
+              `Do not write placeholder text like "None considered." or "N/A."`,
+              `The file watcher will automatically clear each issue once the missing sections are present.`,
               "",
             ];
             for (const [fields, files] of byFields) {

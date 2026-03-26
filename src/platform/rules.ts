@@ -1,11 +1,14 @@
+import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 import type { Environment, WhygraphConfig } from "../entity/types.js";
 import { DECISION_TAGS } from "../entity/types.js";
 
 export interface PlatformRulesResult {
   environment: Environment;
   filePath: string;
+  mcpRegistered: boolean;
+  mcpSetupPath?: string;
 }
 
 const START_MARKER = "<!-- whygraph:start -->";
@@ -95,6 +98,142 @@ function upsertMarkedSection(existing: string, content: string): string {
   return existing + sep + wrapped;
 }
 
+// ============================================================
+// MCP Registration
+// ============================================================
+
+function registerMcpWithClaude(projectDir: string): boolean {
+  try {
+    execSync("claude mcp add --scope project whygraph -- whygraph mcp", {
+      cwd: projectDir,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    // claude CLI not available — write .mcp.json directly as fallback
+    try {
+      const mcpJsonPath = join(projectDir, ".mcp.json");
+      let mcpJson: Record<string, unknown> = {};
+      if (existsSync(mcpJsonPath)) {
+        mcpJson = JSON.parse(readFileSync(mcpJsonPath, "utf-8")) as Record<string, unknown>;
+      }
+      const servers = (mcpJson.mcpServers ?? {}) as Record<string, unknown>;
+      if (!servers.whygraph) {
+        servers.whygraph = { type: "stdio", command: "whygraph", args: ["mcp"] };
+        mcpJson.mcpServers = servers;
+        writeFileSync(mcpJsonPath, JSON.stringify(mcpJson, null, 2) + "\n", "utf-8");
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+function registerMcpWithCursor(projectDir: string): boolean {
+  try {
+    const cursorDir = join(projectDir, ".cursor");
+    mkdirSync(cursorDir, { recursive: true });
+    const mcpPath = join(cursorDir, "mcp.json");
+    let mcp: Record<string, unknown> = {};
+    if (existsSync(mcpPath)) {
+      mcp = JSON.parse(readFileSync(mcpPath, "utf-8")) as Record<string, unknown>;
+    }
+    const servers = (mcp.mcpServers ?? {}) as Record<string, unknown>;
+    if (!servers.whygraph) {
+      servers.whygraph = { command: "whygraph", args: ["mcp"] };
+      mcp.mcpServers = servers;
+      writeFileSync(mcpPath, JSON.stringify(mcp, null, 2) + "\n", "utf-8");
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function registerMcpWithCopilot(projectDir: string): boolean {
+  try {
+    const vscodeDir = join(projectDir, ".vscode");
+    mkdirSync(vscodeDir, { recursive: true });
+    const mcpPath = join(vscodeDir, "mcp.json");
+    let mcp: Record<string, unknown> = {};
+    if (existsSync(mcpPath)) {
+      mcp = JSON.parse(readFileSync(mcpPath, "utf-8")) as Record<string, unknown>;
+    }
+    const servers = (mcp.servers ?? {}) as Record<string, unknown>;
+    if (!servers.whygraph) {
+      servers.whygraph = { type: "stdio", command: "whygraph", args: ["mcp"] };
+      mcp.servers = servers;
+      writeFileSync(mcpPath, JSON.stringify(mcp, null, 2) + "\n", "utf-8");
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function writeMcpSetupMd(projectDir: string, environment: Environment): string {
+  const whygraphDir = join(projectDir, ".whygraph");
+  mkdirSync(whygraphDir, { recursive: true });
+  const filePath = join(whygraphDir, "MCP_SETUP.md");
+
+  const lines: string[] = ["# Whygraph MCP Setup", ""];
+
+  switch (environment) {
+    case "claude-code":
+      lines.push(
+        "Run the following command in your project root:",
+        "",
+        "```bash",
+        "claude mcp add --scope project whygraph -- whygraph mcp",
+        "```",
+      );
+      break;
+    case "cursor":
+      lines.push(
+        "Add the following to `.cursor/mcp.json` in your project root:",
+        "",
+        "```json",
+        JSON.stringify(
+          { mcpServers: { whygraph: { command: "whygraph", args: ["mcp"] } } },
+          null,
+          2,
+        ),
+        "```",
+      );
+      break;
+    case "copilot":
+      lines.push(
+        "Add the following to `.vscode/mcp.json` in your project root:",
+        "",
+        "```json",
+        JSON.stringify(
+          { servers: { whygraph: { type: "stdio", command: "whygraph", args: ["mcp"] } } },
+          null,
+          2,
+        ),
+        "```",
+      );
+      break;
+    default:
+      lines.push(
+        "Add the whygraph MCP server to your AI assistant's MCP configuration.",
+        "",
+        "**Command:** `whygraph mcp`",
+        "**Transport:** stdio",
+        "",
+        "Refer to your AI assistant's documentation for how to register MCP servers.",
+      );
+  }
+
+  writeFileSync(filePath, lines.join("\n") + "\n", "utf-8");
+  return filePath;
+}
+
+// ============================================================
+// Platform Writers
+// ============================================================
+
 export function writePlatformRules(
   projectDir: string,
   environment: Environment,
@@ -105,43 +244,31 @@ export function writePlatformRules(
 
   switch (environment) {
     case "claude-code":
-      return writeClaudeCodeRules(projectDir, instructions, config);
-    case "cursor":
-      return writeAgentsMd(projectDir, instructions, "cursor");
-    case "copilot":
-      return writeAgentsMd(projectDir, instructions, "copilot");
-    case "other":
-      return writeAgentsMd(projectDir, instructions, "other");
+      return writeClaudeCodeRules(projectDir, instructions);
+    case "cursor": {
+      const mcpRegistered = registerMcpWithCursor(projectDir);
+      const mcpSetupPath = mcpRegistered ? undefined : writeMcpSetupMd(projectDir, environment);
+      return { ...writeAgentsMd(projectDir, instructions, environment), mcpRegistered, mcpSetupPath };
+    }
+    case "copilot": {
+      const mcpRegistered = registerMcpWithCopilot(projectDir);
+      const mcpSetupPath = mcpRegistered ? undefined : writeMcpSetupMd(projectDir, environment);
+      return { ...writeAgentsMd(projectDir, instructions, environment), mcpRegistered, mcpSetupPath };
+    }
+    case "other": {
+      const mcpSetupPath = writeMcpSetupMd(projectDir, environment);
+      return { ...writeAgentsMd(projectDir, instructions, environment), mcpRegistered: false, mcpSetupPath };
+    }
   }
 }
 
 function writeClaudeCodeRules(
   projectDir: string,
   instructions: string,
-  config?: WhygraphConfig,
 ): PlatformRulesResult {
-  // Register MCP server in .claude/settings.json
-  const settingsPath = join(projectDir, ".claude", "settings.json");
-  const settingsDir = dirname(settingsPath);
-  mkdirSync(settingsDir, { recursive: true });
+  const mcpRegistered = registerMcpWithClaude(projectDir);
+  const mcpSetupPath = mcpRegistered ? undefined : writeMcpSetupMd(projectDir, "claude-code");
 
-  let settings: Record<string, unknown> = {};
-  if (existsSync(settingsPath)) {
-    const raw = readFileSync(settingsPath, "utf-8");
-    settings = JSON.parse(raw) as Record<string, unknown>;
-  }
-
-  const mcpServers = (settings.mcpServers ?? {}) as Record<string, unknown>;
-  if (!mcpServers.whygraph) {
-    mcpServers.whygraph = {
-      command: "whygraph",
-      args: ["mcp"],
-    };
-    settings.mcpServers = mcpServers;
-    writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
-  }
-
-  // Write instructions to CLAUDE.md
   const claudeMdPath = join(projectDir, "CLAUDE.md");
   let existing = "";
   if (existsSync(claudeMdPath)) {
@@ -151,14 +278,14 @@ function writeClaudeCodeRules(
   const newContent = upsertMarkedSection(existing, instructions);
   writeFileSync(claudeMdPath, newContent, "utf-8");
 
-  return { environment: "claude-code", filePath: claudeMdPath };
+  return { environment: "claude-code", filePath: claudeMdPath, mcpRegistered, mcpSetupPath };
 }
 
 function writeAgentsMd(
   projectDir: string,
   instructions: string,
   environment: Environment,
-): PlatformRulesResult {
+): Omit<PlatformRulesResult, "mcpRegistered" | "mcpSetupPath"> {
   const filePath = join(projectDir, "AGENTS.md");
 
   let existing = "";

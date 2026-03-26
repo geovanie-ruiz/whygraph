@@ -55,12 +55,12 @@ From there, agents capture decisions automatically as they work.
 
 Whygraph is **platform-agnostic**. It works with any AI development environment.
 
-| Platform    | Instruction Delivery | MCP Server | Agent Instructions |
-| ----------- | -------------------- | ---------- | ------------------ |
-| Claude Code | CLAUDE.md            | Auto-registered in `.claude/settings.json` | Full MCP tool access |
-| Cursor      | AGENTS.md            | Manual configuration | Direct file writes |
-| Copilot     | AGENTS.md            | Manual configuration | Direct file writes |
-| Other       | AGENTS.md            | Manual configuration | Direct file writes |
+| Platform    | Instruction Delivery | MCP Server                                 | Agent Instructions   |
+| ----------- | -------------------- | ------------------------------------------ | -------------------- |
+| Claude Code | CLAUDE.md            | Auto-registered via `claude mcp add` (`.mcp.json`) | Full MCP tool access |
+| Cursor      | AGENTS.md            | Manual configuration                       | Direct file writes   |
+| Copilot     | AGENTS.md            | Manual configuration                       | Direct file writes   |
+| Other       | AGENTS.md            | Manual configuration                       | Direct file writes   |
 
 **Claude Code** gets the deepest integration: MCP server auto-registration, write tools in strict mode with fallback to direct file writes, and instructions baked into CLAUDE.md.
 
@@ -81,6 +81,7 @@ Agents capture decisions as they work. The instructions in CLAUDE.md / AGENTS.md
 ### The Server
 
 The whygraph server is a long-running process that:
+
 - Watches `.whygraph/graph/` for file changes (chokidar, 100ms debounce)
 - Maintains an in-memory graphology graph
 - Serves a GraphQL API (queries, mutations, subscriptions via WebSocket)
@@ -96,20 +97,21 @@ When an entity has validation problems (bad refs, missing fields, schema violati
 
 Whygraph exposes MCP tools for agent integration:
 
-| Tool | Description |
-| ---- | ----------- |
+| Tool                              | Description                                   |
+| --------------------------------- | --------------------------------------------- |
 | `whygraph_context(file, symbol?)` | Get decisions for code you're about to modify |
-| `whygraph_get_decisions(filters)` | Query decisions by status, tags, date range |
-| `whygraph_get_gaps(limit?)` | Find areas with no recorded decisions |
-| `whygraph_list_nodes(filters)` | List structural nodes |
-| `whygraph_create_decision(...)` | Create a decision (strict mode) |
-| `whygraph_create_node(...)` | Create a structural node (strict mode) |
+| `whygraph_get_decisions(filters)` | Query decisions by status, tags, date range   |
+| `whygraph_get_gaps(limit?)`       | Find areas with no recorded decisions         |
+| `whygraph_list_nodes(filters)`    | List structural nodes                         |
+| `whygraph_create_decision(...)`   | Create a decision (strict mode)               |
+| `whygraph_create_node(...)`       | Create a structural node (strict mode)        |
 
-Write tools are available in strict mode (`WHYGRAPH_MCP_MODE=strict`). They validate before writing and fall back to direct file writes if the server is unreachable.
+Write tools are available in strict mode. Enable with `whygraph config --mcp-mode strict`. They validate before writing and fall back to direct file writes if the server is unreachable.
 
 ### The Visualization
 
 `whygraph viz` opens a browser to the frontend at `http://localhost:4777`. The visualization features:
+
 - D3 force-directed graph with deterministic seeded layout
 - App node pinned at center, everything radiates outward
 - Live updates via WebSocket subscriptions
@@ -126,8 +128,10 @@ whygraph init                    # Set up whygraph for your project
 whygraph up                      # Start the server in the background
 whygraph down                    # Stop the server
 whygraph restart                 # Stop and restart the server
+whygraph serve                   # Start the server in the foreground
 whygraph status                  # Check server status and entity counts
-whygraph viz [--no-open]         # Open the visualization
+whygraph viz                     # Open the visualization
+whygraph issues                  # List and interactively resolve validation issues
 whygraph config [--flag val]     # View or modify configuration
 whygraph validate                # Validate all entities
 whygraph mcp                     # Start the MCP stdio server
@@ -150,6 +154,7 @@ whygraph mcp                     # Start the MCP stdio server
 ## Multi-Agent / Worktree Support
 
 Whygraph runs one server per repo, watching all git worktrees. When agents work in separate worktrees:
+
 - Each worktree's `.whygraph/graph/` is watched independently
 - ETag-based dirty tracking detects divergence from the main graph
 - Entity IDs use NanoIDs to prevent collisions across concurrent agents

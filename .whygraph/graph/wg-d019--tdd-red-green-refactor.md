@@ -26,3 +26,11 @@ Use vitest for all tests. Follow red-green-refactor: write a failing test first,
 ## Tradeoffs
 
 Gained: fast feedback loop, vitest supports ESM and TS natively, compatible with jest API. Lost: vitest is newer and less battle-tested than jest in some edge cases.
+
+## Alternatives
+
+**Jest**: The dominant Node.js test runner with a large ecosystem. Rejected because Jest requires additional configuration (babel or ts-jest, experimental VM modules) to handle ESM and TypeScript, whereas vitest works with the project's existing tsconfig without modification. The jest-compatible API means the switch has no learning cost.
+
+**Node.js built-in test runner (node:test)**: Available since Node 18, zero dependencies. Rejected because it lacks vitest's watch mode, coverage integration, and UI-friendly reporting. The DX gap is significant for a project following TDD.
+
+**Write-tests-after approach**: Write code first, add tests after features are complete. Rejected because the graph engine and entity operations are pure functions that are easiest to specify before implementation. TDD on pure functions produces better API design by forcing the author to think about inputs and outputs before writing logic.

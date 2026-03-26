@@ -24,3 +24,11 @@ Use CSS custom properties (--color-bg, --color-text, etc.) defined in tokens.css
 ## Tradeoffs
 
 Gained: zero JS runtime cost for theming, works with plain CSS files, inspector-friendly. Lost: no type safety on token names, refactoring tokens requires manual find-replace.
+
+## Alternatives
+
+**CSS-in-JS (styled-components / emotion)**: Define styles and themes in JavaScript, colocated with components. Rejected because it adds a runtime that injects style tags, increases bundle size, and complicates the build setup. The theming problem is simple enough to not justify the overhead.
+
+**Tailwind CSS with dark mode variant**: Use Tailwind's `dark:` prefix for theme variants. Rejected because Tailwind would require significant migration of existing CSS and adds a build step (PostCSS) that isn't otherwise needed. Token-based theming achieves the same outcome with less toolchain complexity.
+
+**Two separate CSS files, loaded/unloaded on toggle**: Swap an entire stylesheet between light and dark versions. Rejected because it causes a flash of unstyled content on toggle, doubles the CSS maintenance surface, and is harder to override for one-off customizations.

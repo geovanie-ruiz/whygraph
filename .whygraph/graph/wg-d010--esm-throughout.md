@@ -25,3 +25,11 @@ ESM everywhere. All TypeScript source uses .js extensions on imports. Package.js
 ## Tradeoffs
 
 Gained: consistent module system, works with modern tooling and top-level await. Lost: some older npm packages need import workarounds, .js extensions in TS source look odd to newcomers.
+
+## Alternatives
+
+**CommonJS throughout**: Use require() and module.exports with "type": "commonjs". Rejected because major dependencies (nanoid, graphology) are now ESM-only or have degraded CJS support, and CJS interop with ESM packages requires workarounds that obscure intent.
+
+**Dual CJS/ESM output**: Compile to both formats for maximum compatibility. Rejected because whygraph is a CLI tool, not a library — downstream consumers don't need dual format, and dual builds add complexity without benefit.
+
+**ts-node / tsx at runtime**: Skip compilation and run TypeScript directly with ts-node or tsx. Rejected because it requires a dev-time dependency in production and adds startup overhead; the CLI ships as compiled JavaScript.

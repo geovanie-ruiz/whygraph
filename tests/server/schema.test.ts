@@ -273,7 +273,7 @@ describe("GraphQL schema", () => {
       const body = await gql(baseUrl, `{
         context(file: "src/auth.ts") {
           nodes { id label name parentChain }
-          decisions { id attributes }
+          decisions { id title }
         }
       }`);
 

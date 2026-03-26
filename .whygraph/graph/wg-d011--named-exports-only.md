@@ -25,3 +25,9 @@ All modules use named exports exclusively. No default exports anywhere in the co
 ## Tradeoffs
 
 Gained: consistent import style, better IDE auto-import, grep-friendly export names. Lost: slightly more verbose for single-export modules, some third-party examples use default exports and must be adapted.
+
+## Alternatives
+
+**Default exports for primary module exports**: Export one thing per module as default, secondary things as named. Rejected because it creates inconsistency — importers have to decide between `import Foo` and `import { Foo }`, IDEs produce inconsistent auto-imports, and renaming requires coordinating both the export name and the import alias.
+
+**Mixed: default for classes, named for functions**: Apply default exports to class-shaped modules only. Rejected because the distinction is arbitrary and hard to enforce; it fragments import style across the codebase without a clear benefit over named exports for everything.

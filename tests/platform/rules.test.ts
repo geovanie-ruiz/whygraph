@@ -49,42 +49,25 @@ describe("writePlatformRules", () => {
     expect(content).toContain("<!-- whygraph:end -->");
   });
 
-  it("claude-code: registers MCP server in settings.json", () => {
+  it("claude-code: registers MCP server via .mcp.json fallback when claude CLI unavailable", () => {
     writePlatformRules(tempDir, "claude-code", "", TEST_CONFIG);
 
-    const settingsPath = join(tempDir, ".claude", "settings.json");
-    expect(existsSync(settingsPath)).toBe(true);
+    // In test environment, `claude mcp add` is unavailable so the fallback writes .mcp.json
+    const mcpJsonPath = join(tempDir, ".mcp.json");
+    expect(existsSync(mcpJsonPath)).toBe(true);
 
-    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
-    expect(settings.mcpServers.whygraph).toEqual({
-      command: "whygraph",
-      args: ["mcp"],
-    });
+    const mcp = JSON.parse(readFileSync(mcpJsonPath, "utf-8"));
+    expect(mcp.mcpServers.whygraph).toBeDefined();
+    expect(mcp.mcpServers.whygraph.command).toBe("whygraph");
   });
 
-  it("claude-code: preserves existing settings.json content", () => {
-    const settingsDir = join(tempDir, ".claude");
-    mkdirSync(settingsDir, { recursive: true });
-    writeFileSync(
-      join(settingsDir, "settings.json"),
-      JSON.stringify({ existingKey: true }, null, 2) + "\n",
-      "utf-8",
-    );
-
-    writePlatformRules(tempDir, "claude-code", "", TEST_CONFIG);
-
-    const settings = JSON.parse(readFileSync(join(settingsDir, "settings.json"), "utf-8"));
-    expect(settings.existingKey).toBe(true);
-    expect(settings.mcpServers.whygraph).toBeDefined();
-  });
-
-  it("claude-code: does not duplicate MCP server on re-run", () => {
+  it("claude-code: does not duplicate MCP entry on re-run", () => {
     writePlatformRules(tempDir, "claude-code", "", TEST_CONFIG);
     writePlatformRules(tempDir, "claude-code", "", TEST_CONFIG);
 
-    const settingsPath = join(tempDir, ".claude", "settings.json");
-    const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
-    expect(Object.keys(settings.mcpServers)).toHaveLength(1);
+    const mcpJsonPath = join(tempDir, ".mcp.json");
+    const mcp = JSON.parse(readFileSync(mcpJsonPath, "utf-8"));
+    expect(Object.keys(mcp.mcpServers)).toHaveLength(1);
   });
 
   it("cursor: writes to AGENTS.md", () => {

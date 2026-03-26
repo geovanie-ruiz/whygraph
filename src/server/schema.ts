@@ -73,14 +73,9 @@ const typeDefs = /* GraphQL */ `
     parentChain: [String!]!
   }
 
-  type ContextDecisionResult {
-    id: ID!
-    attributes: String!
-  }
-
   type ContextResult {
     nodes: [ContextNodeResult!]!
-    decisions: [ContextDecisionResult!]!
+    decisions: [DecisionNode!]!
   }
 
   type NodeSummary {
@@ -258,13 +253,7 @@ export function buildSchema(core: ServerCore) {
         },
         context: (_: unknown, args: { file: string; symbol?: string }) => {
           const result = getContext(core.getGraph(), args.file, args.symbol ?? undefined);
-          return {
-            nodes: result.nodes,
-            decisions: result.decisions.map((d) => ({
-              id: d.id,
-              attributes: JSON.stringify(d.attributes),
-            })),
-          };
+          return result;
         },
         decisions: (_: unknown, args: { status?: string; tags?: string[]; dateFrom?: string; dateTo?: string }) => {
           const filters: DecisionFilters = {};

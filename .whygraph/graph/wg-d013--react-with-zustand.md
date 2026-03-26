@@ -26,3 +26,11 @@ Use Zustand as the single state store. One store with slices for entities, selec
 ## Tradeoffs
 
 Gained: minimal boilerplate, fine-grained subscriptions, works outside React components, tiny bundle. Lost: another dependency, less familiar than Redux for some developers.
+
+## Alternatives
+
+**React Context + useReducer**: Use built-in React primitives for state management. Rejected because context triggers re-renders in all consumers whenever any piece of state changes; the graph visualization and filter panel update at different rates and need isolated subscriptions.
+
+**Redux Toolkit**: Industry-standard state management with devtools and middleware. Rejected because it introduces significant boilerplate (slices, reducers, selectors, dispatch) for a frontend that is essentially a single view with filters. The overhead outweighs the benefits at this scale.
+
+**Jotai / Recoil (atomic state)**: Atom-based state where each piece of state is a separate atom. Rejected because the whygraph store has interconnected state (entities drive the graph which drives selection which drives the detail panel) that benefits from being one store rather than many atoms.

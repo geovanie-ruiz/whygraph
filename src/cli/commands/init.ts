@@ -28,6 +28,8 @@ export interface InitResult {
   appNodePath: string;
   appId: string;
   platformRulesPath: string;
+  mcpRegistered: boolean;
+  mcpSetupPath?: string;
 }
 
 // ============================================================
@@ -129,7 +131,14 @@ export async function runInit(
   // Write platform-specific rules and register MCP server
   const platformResult = writePlatformRules(targetDir, environment, "", config);
 
-  return { configPath, appNodePath, appId, platformRulesPath: platformResult.filePath };
+  return {
+    configPath,
+    appNodePath,
+    appId,
+    platformRulesPath: platformResult.filePath,
+    mcpRegistered: platformResult.mcpRegistered,
+    mcpSetupPath: platformResult.mcpSetupPath,
+  };
 }
 
 // ============================================================
@@ -157,10 +166,14 @@ export function registerInitCommand(program: Command): void {
         if (opts.json) {
           process.stdout.write(JSON.stringify(result, null, 2) + "\n");
         } else {
+          const mcpLine = result.mcpRegistered
+            ? `  MCP: registered\n`
+            : `  MCP: setup failed — see ${result.mcpSetupPath} for manual instructions\n`;
           process.stdout.write(
             `Initialized whygraph in .whygraph/\n` +
             `  App node: ${result.appId}\n` +
             `  Config: ${result.configPath}\n` +
+            mcpLine +
             `\nRun 'whygraph up' to start the server.\n`,
           );
         }

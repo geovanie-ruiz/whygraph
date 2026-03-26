@@ -1,5 +1,5 @@
 import graphology from "graphology";
-import type { SymbolRef } from "../entity/types.js";
+import type { DecisionNode, SymbolRef } from "../entity/types.js";
 
 type MultiDirectedGraph = graphology.MultiDirectedGraph;
 
@@ -10,14 +10,9 @@ export interface ContextNodeResult {
   parentChain: string[];
 }
 
-export interface ContextDecisionResult {
-  id: string;
-  attributes: Record<string, unknown>;
-}
-
 export interface ContextResult {
   nodes: ContextNodeResult[];
-  decisions: ContextDecisionResult[];
+  decisions: DecisionNode[];
 }
 
 function refMatches(
@@ -63,8 +58,8 @@ function getParentChain(graph: MultiDirectedGraph, nodeId: string): string[] {
 function collectDecisions(
   graph: MultiDirectedGraph,
   nodeIds: Set<string>,
-): ContextDecisionResult[] {
-  const decisions = new Map<string, ContextDecisionResult>();
+): DecisionNode[] {
+  const decisions = new Map<string, DecisionNode>();
 
   for (const nodeId of nodeIds) {
     // Find incoming AFFECTS edges (decision -> node)
@@ -75,8 +70,8 @@ function collectDecisions(
         if (!decisions.has(decisionId)) {
           decisions.set(decisionId, {
             id: decisionId,
-            attributes: { ...graph.getNodeAttributes(decisionId) },
-          });
+            ...graph.getNodeAttributes(decisionId),
+          } as DecisionNode);
         }
       }
     }

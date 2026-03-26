@@ -25,3 +25,11 @@ Single .whygraph/config.yaml file for all configuration. CLI reads it on startup
 ## Tradeoffs
 
 Gained: one place to look, git-tracked, human-readable. Lost: no per-environment overrides without editing the file, YAML lacks comments-as-documentation culture.
+
+## Alternatives
+
+**Environment variables for all configuration**: No config file — set port, mode, and flags via env vars. Rejected because env vars are session-scoped and not committed to the repo. They require every developer (and agent) to manually set them, and they're invisible to git history when debugging why a project was configured a certain way.
+
+**Multiple config files by concern** (e.g., `server.yaml`, `platform.yaml`): Split configuration into domain-specific files. Rejected because it multiplies the number of files to read without reducing complexity. Whygraph's configuration surface is small enough to fit comfortably in one file.
+
+**package.json `whygraph` key**: Store configuration in the project's existing package.json. Rejected because whygraph is not always used in a Node.js project. Requiring package.json creates a dependency that breaks non-JS repos.

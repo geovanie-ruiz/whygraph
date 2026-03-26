@@ -27,3 +27,11 @@ Every CLI command accepts a --json flag that switches output to structured JSON 
 ## Tradeoffs
 
 Gained: reliable scripting and AI agent integration, consistent contract across all commands. Lost: every command needs dual output paths, JSON output must be maintained alongside human output.
+
+## Alternatives
+
+**Exit code only, no structured output**: Let scripts check exit codes for pass/fail without parsing output. Rejected because agents and scripts need more than a success/failure signal — they need counts, entity IDs, and error details to take follow-up actions.
+
+**Separate subcommands for machine output** (e.g., `whygraph issues --format json`): Use a `--format` flag with multiple options. Rejected because `--json` is simpler to type and consistent with established CLI conventions (gh CLI, kubectl use `--json` or `-o json`); more formats would be added only if a concrete need arises.
+
+**GraphQL API only, no CLI JSON output**: Require scripts to query the GraphQL endpoint directly for structured data. Rejected because it requires the server to be running; the CLI must work offline for commands like `validate` and `issues`.

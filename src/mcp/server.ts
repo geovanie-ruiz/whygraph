@@ -2,7 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import * as z from "zod/v4";
 import { join } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import * as yaml from "js-yaml";
 import { generateId } from "../entity/id.js";
 import { writeEntity } from "../entity/writer.js";
 import type { DecisionNode, StructuralNode, DecisionTag, StructuralLabel, SymbolRef } from "../entity/types.js";
@@ -14,6 +15,19 @@ function findWhygraphDir(startDir: string): string | null {
     const parent = join(dir, "..");
     if (parent === dir) return null;
     dir = parent;
+  }
+}
+
+function getMcpMode(projectDir: string | null): string {
+  // Env var takes precedence (useful for testing)
+  if (process.env["WHYGRAPH_MCP_MODE"]) return process.env["WHYGRAPH_MCP_MODE"];
+  if (!projectDir) return "default";
+  try {
+    const raw = readFileSync(join(projectDir, ".whygraph", "config.yaml"), "utf-8");
+    const config = yaml.load(raw) as Record<string, unknown>;
+    return (config.mcpMode as string) ?? "default";
+  } catch {
+    return "default";
   }
 }
 
@@ -71,6 +85,9 @@ function errorResult(message: string): { content: Array<{ type: "text"; text: st
 }
 
 export function createMcpServer(): McpServer {
+  const projectDir = findWhygraphDir(process.cwd());
+  const mcpMode = getMcpMode(projectDir);
+
   const server = new McpServer({
     name: "whygraph",
     version: "0.2.0",
@@ -93,7 +110,7 @@ export function createMcpServer(): McpServer {
         query Context($file: String!, $symbol: String) {
           context(file: $file, symbol: $symbol) {
             nodes { id label name parentChain }
-            decisions { id attributes }
+            decisions { id title status date affects tags context decision tradeoffs alternatives }
           }
         }
       `;
@@ -190,7 +207,7 @@ export function createMcpServer(): McpServer {
   });
 
   // Write tools — only registered in strict mode
-  if (process.env["WHYGRAPH_MCP_MODE"] === "strict") {
+  if (mcpMode === "strict") {
     registerWriteTools(server);
   }
 

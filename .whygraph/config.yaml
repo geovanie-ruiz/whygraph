@@ -10,5 +10,5 @@ tags:
   - integration
   - infra
   - ux
-mcpMode: default
+mcpMode: strict
 serverPort: 4777
