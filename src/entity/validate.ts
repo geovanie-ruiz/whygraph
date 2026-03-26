@@ -6,6 +6,43 @@ import {
 import type { Entity, DecisionTag } from "./types.js";
 
 // ============================================================
+// Cross-reference Validation
+// ============================================================
+
+export function validateEntityRefs(entity: Entity, entityMap: Map<string, Entity>): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (isDecisionNode(entity)) {
+    for (const ref of entity.affects) {
+      if (!entityMap.has(ref)) {
+        errors.push({
+          field: "affects",
+          message: `affects ref "${ref}" does not exist in the graph`,
+          severity: "warning",
+        });
+      }
+    }
+    if (entity.supersedes && !entityMap.has(entity.supersedes)) {
+      errors.push({
+        field: "supersedes",
+        message: `supersedes ref "${entity.supersedes}" does not exist in the graph`,
+        severity: "warning",
+      });
+    }
+  }
+
+  if (isStructuralNode(entity) && entity.parent && !entityMap.has(entity.parent)) {
+    errors.push({
+      field: "parent",
+      message: `parent ref "${entity.parent}" does not exist in the graph`,
+      severity: "warning",
+    });
+  }
+
+  return errors;
+}
+
+// ============================================================
 // Validation Types
 // ============================================================
 

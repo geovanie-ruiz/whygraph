@@ -2,8 +2,9 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
 import { parseEntity } from "../../entity/parser.js";
-import { validateEntity } from "../../entity/validate.js";
+import { validateEntity, validateEntityRefs } from "../../entity/validate.js";
 import type { ValidationError } from "../../entity/validate.js";
+import type { Entity } from "../../entity/types.js";
 
 // ============================================================
 // Types
@@ -35,8 +36,10 @@ export async function runValidate(whygraphDir: string): Promise<ValidateResult> 
 
   const files = readdirSync(graphDir).filter((f) => f.endsWith(".md"));
   const errors: FileError[] = [];
-  let entitiesParsed = 0;
+  const entityMap = new Map<string, Entity>();
+  const filePathMap = new Map<string, string>(); // entity id → file path
 
+  // First pass: parse all entities into a map
   for (const file of files) {
     const filePath = join(graphDir, file);
     const content = readFileSync(filePath, "utf-8");
@@ -51,22 +54,28 @@ export async function runValidate(whygraphDir: string): Promise<ValidateResult> 
       continue;
     }
 
-    entitiesParsed++;
+    entityMap.set(entity.id, entity);
+    filePathMap.set(entity.id, filePath);
+  }
 
-    const result = validateEntity(entity);
-    for (const err of result.errors) {
-      errors.push({
-        file: filePath,
-        field: err.field,
-        message: err.message,
-        severity: err.severity,
-      });
+  // Second pass: schema + cross-reference validation
+  for (const [id, entity] of entityMap) {
+    const filePath = filePathMap.get(id)!;
+
+    const schemaResult = validateEntity(entity);
+    for (const err of schemaResult.errors) {
+      errors.push({ file: filePath, field: err.field, message: err.message, severity: err.severity });
+    }
+
+    const refErrors = validateEntityRefs(entity, entityMap);
+    for (const err of refErrors) {
+      errors.push({ file: filePath, field: err.field, message: err.message, severity: err.severity });
     }
   }
 
   return {
     filesChecked: files.length,
-    entitiesParsed,
+    entitiesParsed: entityMap.size,
     errors,
   };
 }
