@@ -2,6 +2,27 @@
   "name": "whygraph",
   "version": "0.2.0",
   "description": "The graph of why. So your agent knows before it touches anything.",
+  "author": "Geovanie Ruiz",
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "agent",
+    "mcp",
+    "architecture",
+    "decision",
+    "adr",
+    "claude",
+    "cursor",
+    "vibe-coding"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/geovanie-ruiz/whygraph.git"
+  },
+  "homepage": "https://github.com/geovanie-ruiz/whygraph#readme",
+  "bugs": {
+    "url": "https://github.com/geovanie-ruiz/whygraph/issues"
+  },
   "type": "module",
   "bin": {
     "whygraph": "./dist/cli/index.js"
