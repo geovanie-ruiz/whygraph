@@ -98,6 +98,7 @@ describe("Timeline component", () => {
 
   it("slider change calls onFilterChange with new timestamp", () => {
     const onFilterChange = vi.fn();
+    const ts1 = new Date("2025-01-01T00:00:00Z").getTime();
     const entities = new Map<string, Entity>([
       ["a", makeEntity("a", "2025-01-01T00:00:00Z")],
       ["b", makeEntity("b", "2025-01-05T00:00:00Z")],
@@ -111,11 +112,11 @@ describe("Timeline component", () => {
       />,
     );
 
+    // Slider uses indices (0-based), not raw timestamps
     const slider = getByTestId("timeline-slider") as HTMLInputElement;
-    const targetValue = new Date("2025-01-03T00:00:00Z").getTime();
-    fireEvent.change(slider, { target: { value: String(targetValue) } });
+    fireEvent.change(slider, { target: { value: "0" } });
 
-    expect(onFilterChange).toHaveBeenCalledWith(targetValue);
+    expect(onFilterChange).toHaveBeenCalledWith(ts1);
   });
 
   it("displays formatted timestamp when filter is active", () => {
@@ -140,7 +141,7 @@ describe("Timeline component", () => {
     expect(label.textContent!.length).toBeGreaterThan(0);
   });
 
-  it("shows Live label when filterTimestamp is null", () => {
+  it("shows formatted timestamp in label when filterTimestamp is null (live = last frame)", () => {
     const entities = new Map<string, Entity>([
       ["a", makeEntity("a", "2025-01-01T00:00:00Z")],
       ["b", makeEntity("b", "2025-01-05T00:00:00Z")],
@@ -154,7 +155,14 @@ describe("Timeline component", () => {
       />,
     );
 
-    expect(getByTestId("timeline-label").textContent).toBe("Live");
+    // The label always shows a formatted timestamp; "Live" is on the separate Live button
+    const label = getByTestId("timeline-label");
+    expect(label.textContent).not.toBe("Live");
+    expect(label.textContent!.length).toBeGreaterThan(0);
+
+    // The Live button is disabled when no filter is active (already at live/last frame)
+    const liveBtn = getByTestId("timeline-live") as HTMLButtonElement;
+    expect(liveBtn.disabled).toBe(true);
   });
 
   it("Live button calls onFilterChange(null)", () => {

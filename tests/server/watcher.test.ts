@@ -105,9 +105,10 @@ describe("FileWatcher", () => {
     expect(changeEvent!.entityId).toBe("wg-feat1");
   });
 
-  it("detects file deletion", async () => {
+  it("detects file deletion and extracts id from id--slug filename", async () => {
     watchDir = await makeTempDir();
-    const filePath = path.join(watchDir, "wg-feat1.md");
+    // Use the real filename format: id--slugified-name.md
+    const filePath = path.join(watchDir, "wg-feat1--my-feature.md");
     await fs.writeFile(filePath, structuralMd("wg-feat1"));
 
     watcher = new FileWatcher(watchDir);
@@ -132,7 +133,7 @@ describe("FileWatcher", () => {
     const deleteEvent = events.find((e) => e.type === "deleted");
     expect(deleteEvent).toBeDefined();
     expect(deleteEvent!.entityId).toBe("wg-feat1");
-    expect(deleteEvent!.filePath).toContain("wg-feat1.md");
+    expect(deleteEvent!.filePath).toContain("wg-feat1--my-feature.md");
   });
 
   it("debounces rapid changes into one batch", async () => {
@@ -169,6 +170,7 @@ describe("FileWatcher", () => {
     const events = await eventsPromise;
     expect(events).toHaveLength(0);
   });
+
 
   it("clean shutdown stops watching", async () => {
     watchDir = await makeTempDir();

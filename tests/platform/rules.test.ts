@@ -125,4 +125,101 @@ describe("writePlatformRules", () => {
     expect(content).toContain("Choosing between alternatives");
     expect(content).toContain("Rejecting an approach");
   });
+
+  it("cursor: registers MCP in .cursor/mcp.json", () => {
+    writePlatformRules(tempDir, "cursor", "", TEST_CONFIG);
+
+    const mcpPath = join(tempDir, ".cursor", "mcp.json");
+    expect(existsSync(mcpPath)).toBe(true);
+    const mcp = JSON.parse(readFileSync(mcpPath, "utf-8"));
+    expect(mcp.mcpServers.whygraph).toBeDefined();
+  });
+
+  it("cursor: does not duplicate MCP entry on re-run", () => {
+    writePlatformRules(tempDir, "cursor", "", TEST_CONFIG);
+    writePlatformRules(tempDir, "cursor", "", TEST_CONFIG);
+
+    const mcpPath = join(tempDir, ".cursor", "mcp.json");
+    const mcp = JSON.parse(readFileSync(mcpPath, "utf-8"));
+    expect(Object.keys(mcp.mcpServers)).toHaveLength(1);
+  });
+
+  it("copilot: registers MCP in .vscode/mcp.json", () => {
+    writePlatformRules(tempDir, "copilot", "", TEST_CONFIG);
+
+    const mcpPath = join(tempDir, ".vscode", "mcp.json");
+    expect(existsSync(mcpPath)).toBe(true);
+    const mcp = JSON.parse(readFileSync(mcpPath, "utf-8"));
+    expect(mcp.servers.whygraph).toBeDefined();
+  });
+
+  it("copilot: merges with existing .vscode/mcp.json", () => {
+    mkdirSync(join(tempDir, ".vscode"), { recursive: true });
+    writeFileSync(
+      join(tempDir, ".vscode", "mcp.json"),
+      JSON.stringify({ servers: { othertool: { command: "othertool" } } }, null, 2),
+      "utf-8",
+    );
+
+    writePlatformRules(tempDir, "copilot", "", TEST_CONFIG);
+
+    const mcp = JSON.parse(readFileSync(join(tempDir, ".vscode", "mcp.json"), "utf-8"));
+    expect(mcp.servers.whygraph).toBeDefined();
+    expect(mcp.servers.othertool).toBeDefined();
+  });
+
+  it("other: writes MCP_SETUP.md", () => {
+    const result = writePlatformRules(tempDir, "other", "", TEST_CONFIG);
+
+    expect(result.mcpRegistered).toBe(false);
+    expect(result.mcpSetupPath).toBeDefined();
+    const content = readFileSync(result.mcpSetupPath!, "utf-8");
+    expect(content).toContain("whygraph MCP");
+  });
+
+  it("cursor: falls back to MCP_SETUP.md when .cursor dir cannot be created", () => {
+    // Make .cursor a file so mkdirSync throws
+    writeFileSync(join(tempDir, ".cursor"), "not a dir", "utf-8");
+
+    const result = writePlatformRules(tempDir, "cursor", "", TEST_CONFIG);
+
+    expect(result.mcpRegistered).toBe(false);
+    expect(result.mcpSetupPath).toBeDefined();
+    const content = readFileSync(result.mcpSetupPath!, "utf-8");
+    // cursor case in writeMcpSetupMd includes cursor JSON
+    expect(content).toContain("whygraph");
+  });
+
+  it("copilot: falls back to MCP_SETUP.md when .vscode dir cannot be created", () => {
+    // Make .vscode a file so mkdirSync throws
+    writeFileSync(join(tempDir, ".vscode"), "not a dir", "utf-8");
+
+    const result = writePlatformRules(tempDir, "copilot", "", TEST_CONFIG);
+
+    expect(result.mcpRegistered).toBe(false);
+    expect(result.mcpSetupPath).toBeDefined();
+    const content = readFileSync(result.mcpSetupPath!, "utf-8");
+    // copilot case in writeMcpSetupMd includes copilot JSON
+    expect(content).toContain("whygraph");
+  });
+
+  it("claude-code: falls back to MCP_SETUP.md when both claude CLI and .mcp.json fail", () => {
+    // Make .mcp.json a directory so writeFileSync fails in the fallback
+    mkdirSync(join(tempDir, ".mcp.json"), { recursive: true });
+
+    const result = writePlatformRules(tempDir, "claude-code", "", TEST_CONFIG);
+
+    // registerMcpWithClaude returns false, so writeMcpSetupMd is called with "claude-code"
+    expect(result.mcpRegistered).toBe(false);
+    expect(result.mcpSetupPath).toBeDefined();
+    const content = readFileSync(result.mcpSetupPath!, "utf-8");
+    expect(content).toContain("whygraph");
+  });
+
+  it("uses _primeOutput when config is not provided", () => {
+    const result = writePlatformRules(tempDir, "cursor", "custom agent instructions");
+
+    const content = readFileSync(result.filePath, "utf-8");
+    expect(content).toContain("custom agent instructions");
+  });
 });

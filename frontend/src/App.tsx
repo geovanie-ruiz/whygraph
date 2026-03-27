@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Provider } from "urql";
 import { urqlClient } from "./lib/graphql.js";
 import {
@@ -11,8 +11,9 @@ import {
 } from "./lib/store.js";
 import { wsClient } from "./lib/graphql.js";
 import { ThemeProvider } from "./lib/theme.js";
-import { GraphView } from "./components/GraphView.js";
+import { GraphView, type GraphViewHandle } from "./components/GraphView.js";
 import { DetailPanel } from "./components/DetailPanel.js";
+import { TreeNav } from "./components/TreeNav.js";
 import { GapHighlight } from "./components/GapHighlight.js";
 import type { DecisionTag } from "./components/TagFilter.js";
 import { StaleRefBadge } from "./components/StaleRefBadge.js";
@@ -20,6 +21,7 @@ import { Header } from "./components/Header.js";
 import { Footer } from "./components/Footer.js";
 import { MenuDropdown } from "./components/MenuDropdown.js";
 import { ErrorBanner, useValidationErrors } from "./components/ErrorBanner.js";
+import { Timeline, filterEntitiesByTimestamp } from "./components/Timeline.js";
 import "./styles/app-shell.css";
 
 function EntityDashboard() {
@@ -30,6 +32,8 @@ function EntityDashboard() {
   const [staleRefIds, setStaleRefIds] = useState<Set<string>>(new Set());
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [filterTimestamp, setFilterTimestamp] = useState<number | null>(null);
+  const graphRef = useRef<GraphViewHandle>(null);
 
   useEffect(() => {
     const unsubscribe = wsClient.subscribe<{
@@ -65,6 +69,11 @@ function EntityDashboard() {
     setSelectedEntityId((prev) => (prev === entityId ? null : entityId));
   }, []);
 
+  const handleTreeNodeClick = useCallback((entityId: string) => {
+    setSelectedEntityId(entityId);
+    graphRef.current?.zoomToNode(entityId);
+  }, []);
+
   const handleMenuToggle = useCallback(() => {
     setMenuOpen((prev) => !prev);
   }, []);
@@ -91,14 +100,20 @@ function EntityDashboard() {
     (e) => e.label === "Decision",
   ).length;
 
+  // Filter entities by timeline timestamp
+  const timestampFilteredEntities = useMemo(() => {
+    if (filterTimestamp === null) return entities;
+    return filterEntitiesByTimestamp(entities, filterTimestamp);
+  }, [entities, filterTimestamp]);
+
   // Filter entities by selected tags (OR logic)
   const filteredEntities = useMemo(() => {
-    if (selectedTags.size === 0) return entities;
+    if (selectedTags.size === 0) return timestampFilteredEntities;
     const filtered = new Map<string, Entity>();
     const connectedNodeIds = new Set<string>();
 
     // First pass: find matching decisions and their connected nodes
-    for (const [id, entity] of entities) {
+    for (const [id, entity] of timestampFilteredEntities) {
       if ("tags" in entity) {
         const decision = entity as DecisionNodeEntity;
         const hasMatchingTag = decision.tags.some((t) =>
@@ -118,7 +133,7 @@ function EntityDashboard() {
 
     // Second pass: include structural nodes connected to matching decisions
     const addWithParents = (nodeId: string) => {
-      const entity = entities.get(nodeId);
+      const entity = timestampFilteredEntities.get(nodeId);
       if (!entity || filtered.has(nodeId)) return;
       filtered.set(nodeId, entity);
       if ("parent" in entity && entity.parent) {
@@ -131,7 +146,7 @@ function EntityDashboard() {
     }
 
     return filtered;
-  }, [entities, selectedTags]);
+  }, [timestampFilteredEntities, selectedTags]);
 
   return (
     <EntityStoreContext.Provider value={storeValue}>
@@ -146,21 +161,41 @@ function EntityDashboard() {
           />
         </Header>
         <div className="app-graph-area">
-          <ErrorBanner nodeErrors={nodeErrors} generalErrors={generalErrors} />
-          <GraphView
+          <TreeNav
             entities={filteredEntities}
-            onSelect={handleSelect}
-            highlightedIds={gapIds}
-            staleRefIds={staleRefIds}
+            selectedEntityId={selectedEntityId}
+            onNodeClick={handleTreeNodeClick}
             errorIds={new Set(nodeErrors.keys())}
+            staleRefIds={staleRefIds}
           />
-          <DetailPanel
-            entity={selectedEntity}
-            entities={entities}
-            onClose={() => setSelectedEntityId(null)}
-            errors={selectedEntityErrors}
-          />
+          <div className="graph-area-main">
+            <div className="graph-viewport">
+              <ErrorBanner nodeErrors={nodeErrors} generalErrors={generalErrors} />
+              <GraphView
+                ref={graphRef}
+                entities={filteredEntities}
+                onSelect={handleSelect}
+                onDeselect={() => setSelectedEntityId(null)}
+                selectedEntityId={selectedEntityId}
+                onFitAll={() => setSelectedEntityId(null)}
+                highlightedIds={gapIds}
+                staleRefIds={staleRefIds}
+                errorIds={new Set(nodeErrors.keys())}
+              />
+            </div>
+            <DetailPanel
+              entity={selectedEntity}
+              entities={entities}
+              onClose={() => setSelectedEntityId(null)}
+              errors={selectedEntityErrors}
+            />
+          </div>
         </div>
+        <Timeline
+          entities={entities}
+          filterTimestamp={filterTimestamp}
+          onFilterChange={setFilterTimestamp}
+        />
         <Footer
           entityCount={entities.size}
           nodeCount={nodeCount}

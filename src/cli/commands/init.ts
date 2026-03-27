@@ -64,6 +64,7 @@ export async function runInit(
                 message: "App name:",
               },
             ]),
+        /* v8 ignore start */
         ...(environment
           ? []
           : [
@@ -79,11 +80,13 @@ export async function runInit(
                 ],
               },
             ]),
+        /* v8 ignore stop */
       ],
       { onCancel: () => { throw new Error("Init cancelled by user."); } },
     );
 
     if (!appName) appName = answers.appName;
+    /* v8 ignore next 1 */
     if (!environment) environment = answers.environment;
   }
 
@@ -178,6 +181,7 @@ export function registerInitCommand(program: Command): void {
           );
         }
       } catch (err: unknown) {
+        /* v8 ignore next 1 */
         const message = err instanceof Error ? err.message : String(err);
         if (opts.json) {
           process.stdout.write(

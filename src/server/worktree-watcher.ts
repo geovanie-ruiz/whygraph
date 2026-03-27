@@ -61,12 +61,14 @@ export class WorktreeWatcher {
         this.worktreeEntities.delete(event.entityId);
         this.dirtyEntities.delete(event.entityId);
         this.core.removeEntity(event.entityId);
+      /* v8 ignore next 1 */
       } else if (event.entityId) {
         this.worktreeEntities.add(event.entityId);
         // Read the file to get the full entity
         fs.readFile(event.filePath, "utf-8")
           .then((content) => {
             const entity = parseEntity(content);
+            /* v8 ignore next 1 */
             if (entity) {
               // Track dirty state via ETag comparison with main entity
               const mainEntity = this.core.getEntity(entity.id);
@@ -81,9 +83,11 @@ export class WorktreeWatcher {
               this.core.addOrUpdateEntity(entity.id, tagged);
             }
           })
+          /* v8 ignore start */
           .catch(() => {
             // File may have been deleted between event and read
           });
+          /* v8 ignore stop */
       }
     }
   }

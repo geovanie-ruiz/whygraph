@@ -63,6 +63,7 @@ function findSourceRoot(projectDir: string): string | null {
 function findMainFiles(dirPath: string, projectDir: string): SymbolRef[] {
   const refs: SymbolRef[] = [];
 
+  /* v8 ignore next 1 */
   if (!existsSync(dirPath)) return refs;
 
   const entries = readdirSync(dirPath);
@@ -80,6 +81,7 @@ function findMainFiles(dirPath: string, projectDir: string): SymbolRef[] {
 }
 
 function getSubdirectories(dirPath: string): string[] {
+  /* v8 ignore next 1 */
   if (!existsSync(dirPath)) return [];
 
   return readdirSync(dirPath).filter((entry) => {

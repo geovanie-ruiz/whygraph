@@ -10,8 +10,8 @@ affects:
 tags:
   - arch
   - ux
-created_at: "2026-03-24T14:00:00Z"
-updated_at: "2026-03-24T14:00:00Z"
+created_at: "2026-03-23T21:00:00Z"
+updated_at: "2026-03-23T21:00:00Z"
 ---
 
 ## Context

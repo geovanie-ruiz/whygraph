@@ -9,8 +9,8 @@ affects:
 tags:
   - arch
   - performance
-created_at: "2026-03-24T03:01:00Z"
-updated_at: "2026-03-24T03:01:00Z"
+created_at: "2026-03-22T18:00:00Z"
+updated_at: "2026-03-22T18:00:00Z"
 ---
 
 ## Context

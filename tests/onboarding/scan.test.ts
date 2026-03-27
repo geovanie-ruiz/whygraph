@@ -124,4 +124,19 @@ describe("runScan", () => {
     expect(result.proposal.features).toHaveLength(1);
     expect(result.proposal.features[0].name).toBe("auth");
   });
+
+  it("skips main-file-named entries that are directories", async () => {
+    // Create a directory named "index.ts" — statSync().isFile() returns false
+    mkdirSync(join(tempDir, "src", "auth", "index.ts"), { recursive: true });
+
+    const whygraphDir = join(tempDir, ".whygraph");
+    mkdirSync(whygraphDir, { recursive: true });
+
+    const result = await runScan(tempDir, whygraphDir);
+
+    const auth = result.proposal.features.find((f) => f.name === "auth");
+    expect(auth).toBeDefined();
+    // index.ts is a directory, so no refs
+    expect(auth!.refs).toHaveLength(0);
+  });
 });

@@ -158,34 +158,31 @@ export function DetailPanel({ entity, entities, onClose, errors }: DetailPanelPr
   const isOpen = entity !== null;
 
   return (
-    <>
-      {isOpen && (
-        <div className="detail-panel__backdrop" onClick={onClose} />
-      )}
-      <div
-        data-testid="detail-panel"
-        className="detail-panel"
-        data-open={isOpen}
-      >
-      {entity && (
-        <>
-          <button
-            data-testid="detail-close"
-            onClick={onClose}
-            className="detail-panel__close"
-            aria-label="Close"
-          >
-            ×
-          </button>
-          {errors && errors.length > 0 && <ErrorDetail errors={errors} />}
-          {isDecision(entity) ? (
-            <DecisionDetail entity={entity} entities={entities} hasErrors={!!errors?.length} />
-          ) : isStructural(entity) ? (
-            <StructuralDetail entity={entity} hasErrors={!!errors?.length} />
-          ) : null}
-        </>
-      )}
+    <div
+      data-testid="detail-panel"
+      className="detail-panel"
+      data-open={isOpen}
+    >
+      <div className="detail-panel__inner">
+        {entity && (
+          <>
+            <button
+              data-testid="detail-close"
+              onClick={onClose}
+              className="detail-panel__close"
+              aria-label="Close"
+            >
+              ×
+            </button>
+            {errors && errors.length > 0 && <ErrorDetail errors={errors} />}
+            {isDecision(entity) ? (
+              <DecisionDetail entity={entity} entities={entities} hasErrors={!!errors?.length} />
+            ) : isStructural(entity) ? (
+              <StructuralDetail entity={entity} hasErrors={!!errors?.length} />
+            ) : null}
+          </>
+        )}
+      </div>
     </div>
-    </>
   );
 }

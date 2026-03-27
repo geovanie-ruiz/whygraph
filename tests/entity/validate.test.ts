@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateEntity } from "../../src/entity/validate.js";
+import { validateEntity, validateEntityRefs } from "../../src/entity/validate.js";
 import type { ValidationResult } from "../../src/entity/validate.js";
 import type {
   StructuralNode,
@@ -275,5 +275,36 @@ describe("validateEntity", () => {
     const result = validateEntity(node);
     expect(result.valid).toBe(false);
     expect(errorFields(result)).toContain("label");
+  });
+});
+
+describe("validateEntityRefs", () => {
+  it("returns warning when affects ref is missing from entity map", () => {
+    const decision = makeDecisionNode({ affects: ["wg-missing"] });
+    const entityMap = new Map<string, Entity>();
+    const errors = validateEntityRefs(decision, entityMap);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].field).toBe("affects");
+    expect(errors[0].message).toContain("wg-missing");
+    expect(errors[0].severity).toBe("warning");
+  });
+
+  it("returns warning when supersedes ref is missing from entity map", () => {
+    const feature = makeStructuralNode();
+    const decision = makeDecisionNode({ supersedes: "wg-old" });
+    // Include the affects ref so only the supersedes error fires
+    const entityMap = new Map<string, Entity>([["wg-a1b2", feature]]);
+    const errors = validateEntityRefs(decision, entityMap);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].field).toBe("supersedes");
+    expect(errors[0].message).toContain("wg-old");
+  });
+
+  it("returns no errors when all refs exist", () => {
+    const feature = makeStructuralNode();
+    const decision = makeDecisionNode({ affects: ["wg-a1b2"] });
+    const entityMap = new Map<string, Entity>([["wg-a1b2", feature]]);
+    const errors = validateEntityRefs(decision, entityMap);
+    expect(errors).toHaveLength(0);
   });
 });

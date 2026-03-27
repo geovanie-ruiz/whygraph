@@ -13,8 +13,8 @@ refs:
   - file: src/cli/commands/validate.ts
   - file: src/cli/commands/status.ts
   - file: src/cli/commands/viz.ts
-created_at: "2026-03-24T01:03:00Z"
-updated_at: "2026-03-24T01:03:00Z"
+created_at: "2026-03-23T09:00:00Z"
+updated_at: "2026-03-23T09:00:00Z"
 ---
 
 Command-line interface. Init, serve, config, prime, validate, status, viz.

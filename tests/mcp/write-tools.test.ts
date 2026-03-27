@@ -173,6 +173,155 @@ describe("MCP write tools (strict mode)", () => {
   });
 });
 
+describe("MCP write tools fallback (server unreachable)", () => {
+  let client: Client;
+  let tempDir: string;
+  let originalCwd: string;
+
+  beforeEach(async () => {
+    mockFetch.mockReset();
+    process.env["WHYGRAPH_MCP_MODE"] = "strict";
+    delete process.env["WHYGRAPH_PORT"];
+
+    // Set up a temp dir with .whygraph/graph and config.yaml
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const nodeFs = await import("node:fs");
+    tempDir = nodeFs.mkdtempSync(path.join(os.tmpdir(), "whygraph-mcp-fallback-"));
+    nodeFs.mkdirSync(path.join(tempDir, ".whygraph", "graph"), { recursive: true });
+    nodeFs.writeFileSync(
+      path.join(tempDir, ".whygraph", "config.yaml"),
+      "mcpMode: strict\nserverPort: 4777\n",
+    );
+
+    // chdir into tempDir so mcp/server.ts's findWhygraphDir finds our temp dir
+    originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    const mcpServer = createMcpServer();
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    client = new Client({ name: "test-client", version: "1.0.0" });
+    await mcpServer.connect(serverTransport);
+    await client.connect(clientTransport);
+  });
+
+  afterEach(async () => {
+    delete process.env["WHYGRAPH_MCP_MODE"];
+    await client.close();
+    process.chdir(originalCwd);
+    const nodeFs = await import("node:fs");
+    if (tempDir) nodeFs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("falls back to disk write when server unreachable for createDecision", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    const result = await client.callTool({
+      name: "whygraph_create_decision",
+      arguments: {
+        title: "Fallback Decision",
+        date: "2026-03-26",
+        affects: ["wg-some-node"],
+        tags: ["arch"],
+        context: "Some context",
+        decision: "Some decision",
+        tradeoffs: "Some tradeoffs",
+        alternatives: "None",
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed._fallback).toBe(true);
+    expect(parsed.title).toBe("Fallback Decision");
+    expect(parsed._filePath).toContain(tempDir);
+  });
+
+  it("falls back to disk write when server unreachable for createNode", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    const result = await client.callTool({
+      name: "whygraph_create_node",
+      arguments: {
+        label: "Feature",
+        name: "FallbackFeature",
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed._fallback).toBe(true);
+    expect(parsed.name).toBe("FallbackFeature");
+    expect(parsed._filePath).toContain(tempDir);
+  });
+});
+
+describe("findWhygraphDir traversal via subdirectory cwd", () => {
+  let tempDir: string;
+  let originalCwd: string;
+
+  beforeEach(async () => {
+    mockFetch.mockReset();
+    process.env["WHYGRAPH_MCP_MODE"] = "strict";
+
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const nodeFs = await import("node:fs");
+    tempDir = nodeFs.mkdtempSync(path.join(os.tmpdir(), "whygraph-traversal-"));
+    nodeFs.mkdirSync(path.join(tempDir, ".whygraph", "graph"), { recursive: true });
+    nodeFs.writeFileSync(
+      path.join(tempDir, ".whygraph", "config.yaml"),
+      "mcpMode: strict\nserverPort: 4777\n",
+    );
+    // Create a subdirectory — chdir here so findWhygraphDir must traverse UP
+    nodeFs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+    originalCwd = process.cwd();
+    process.chdir(path.join(tempDir, "src"));
+  });
+
+  afterEach(async () => {
+    delete process.env["WHYGRAPH_MCP_MODE"];
+    process.chdir(originalCwd);
+    const nodeFs = await import("node:fs");
+    if (tempDir) nodeFs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("traverses parent directories to find .whygraph/config.yaml", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    const mcpServer = createMcpServer();
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test-client", version: "1.0.0" });
+    await mcpServer.connect(serverTransport);
+    await client.connect(clientTransport);
+
+    // Call write tool — fallback uses findWhygraphDir(process.cwd()) = src dir
+    const result = await client.callTool({
+      name: "whygraph_create_decision",
+      arguments: {
+        title: "Traversal Test",
+        date: "2026-03-26",
+        affects: ["wg-node1"],
+        tags: ["arch"],
+        context: "ctx",
+        decision: "dec",
+        tradeoffs: "trd",
+        alternatives: "none",
+      },
+    });
+
+    await client.close();
+
+    // Should succeed via fallback (traversed up to find tempDir)
+    expect(result.isError).toBeFalsy();
+    const content = result.content as Array<{ type: string; text: string }>;
+    const parsed = JSON.parse(content[0].text);
+    expect(parsed._fallback).toBe(true);
+  });
+});
+
 describe("MCP write tools not registered in default mode", () => {
   it("does not register write tools when mode is not strict", async () => {
     process.env["WHYGRAPH_MCP_MODE"] = "default";

@@ -94,4 +94,9 @@ describe("parseFilename", () => {
   it("returns null for invalid filenames", () => {
     expect(parseFilename("not-a-valid-file.txt")).toBeNull();
   });
+
+  it("returns null for .md files with invalid id format", () => {
+    // Uppercase in id doesn't match /^[a-z]+-[0-9a-z]+$/
+    expect(parseFilename("INVALID-file.md")).toBeNull();
+  });
 });

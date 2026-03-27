@@ -140,6 +140,41 @@ describe("cascadeRemoval", () => {
     expect(result.partialDecisionPatches).toEqual([]);
   });
 
+  it("skips decisions whose affects have no overlap with the removal set", () => {
+    const feat1 = makeStructural({ id: "wg-feat1", label: "Feature", name: "Auth" });
+    const feat2 = makeStructural({ id: "wg-feat2", label: "Feature", name: "Billing" });
+    // decision only affects feat2 — not in the removal set when feat1 is removed
+    const dec = makeDecision({ id: "wg-dec1", affects: ["wg-feat2"] });
+
+    const result = cascadeRemoval(toMap([feat1, feat2, dec]), "wg-feat1", "2026-03-24T12:00:00Z");
+
+    expect(result.removedIds).toEqual(["wg-feat1"]);
+    expect(result.orphanedDecisionIds).toEqual([]);
+    expect(result.partialDecisionPatches).toEqual([]);
+  });
+
+  it("skips a decision that is itself in the removal set", () => {
+    // Call cascadeRemoval with a decision node id — it gets added to removalSet,
+    // then gets skipped when iterating decisions (removalSet.has(entity.id) branch).
+    const feat = makeStructural({ id: "wg-feat1", label: "Feature", name: "Auth" });
+    const dec = makeDecision({ id: "wg-dec1", affects: ["wg-feat1"] });
+
+    // Remove the decision itself — it goes into removalSet, then gets skipped
+    const result = cascadeRemoval(toMap([feat, dec]), "wg-dec1", "2026-03-24T12:00:00Z");
+
+    expect(result.removedIds).toContain("wg-dec1");
+    expect(result.orphanedDecisionIds).toEqual([]);
+  });
+
+  it("handles nonexistent nodeId gracefully", () => {
+    const feat = makeStructural({ id: "wg-feat1", label: "Feature", name: "Auth" });
+
+    const result = cascadeRemoval(toMap([feat]), "wg-nonexistent", "2026-03-24T12:00:00Z");
+
+    expect(result.removedIds).toHaveLength(0);
+    expect(result.orphanedDecisionIds).toEqual([]);
+  });
+
   it("excludes already-removed decisions from orphan check", () => {
     const feat = makeStructural({
       id: "wg-feat1",

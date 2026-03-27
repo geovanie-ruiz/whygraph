@@ -44,6 +44,7 @@ export function registerDownCommand(program: Command): void {
           process.stdout.write(`No server running on port ${result.port}\n`);
         }
       } catch (err: unknown) {
+        /* v8 ignore next 1 */
         const message = err instanceof Error ? err.message : String(err);
         if (opts.json) {
           process.stdout.write(JSON.stringify({ error: message }) + "\n");

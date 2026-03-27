@@ -85,6 +85,23 @@ describe("runConfig", () => {
     expect(persisted.appName).toBe("TestApp");
   });
 
+  it("update serverPort persists to disk", () => {
+    writeTestConfig(tempDir, defaultConfig());
+    const result = runConfig(tempDir, { serverPort: 5555 });
+    expect(result.updated).toBe(true);
+    expect(result.config.serverPort).toBe(5555);
+    const raw = readFileSync(join(tempDir, ".whygraph", "config.yaml"), "utf-8");
+    const persisted = yaml.load(raw) as WhygraphConfig;
+    expect(persisted.serverPort).toBe(5555);
+  });
+
+  it("update tags persists to disk", () => {
+    writeTestConfig(tempDir, defaultConfig());
+    const result = runConfig(tempDir, { tags: ["arch", "security"] });
+    expect(result.updated).toBe(true);
+    expect(result.config.tags).toEqual(["arch", "security"]);
+  });
+
   it("invalid value returns error", () => {
     writeTestConfig(tempDir, defaultConfig());
 
@@ -94,6 +111,14 @@ describe("runConfig", () => {
 
     expect(() => runConfig(tempDir, { mcpMode: "loose" })).toThrow(
       /Invalid mcpMode/,
+    );
+
+    expect(() => runConfig(tempDir, { serverPort: NaN })).toThrow(
+      /Invalid serverPort/,
+    );
+
+    expect(() => runConfig(tempDir, { tags: ["invalid-tag"] })).toThrow(
+      /Invalid tag/,
     );
   });
 

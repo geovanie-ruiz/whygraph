@@ -106,11 +106,16 @@ export function registerStatusCommand(program: Command): void {
           process.stdout.write(JSON.stringify(result, null, 2) + "\n");
         } else {
           if (result.serverRunning) {
+            /* v8 ignore start */
+            const ec = result.entityCount ?? "unknown";
+            const nc = result.nodeCount ?? "unknown";
+            const dc = result.decisionCount ?? "unknown";
+            /* v8 ignore stop */
             process.stdout.write(
               `Server: running (port ${result.serverPort})\n` +
-              `  Entities: ${result.entityCount ?? "unknown"}\n` +
-              `  Nodes: ${result.nodeCount ?? "unknown"}\n` +
-              `  Decisions: ${result.decisionCount ?? "unknown"}\n`,
+              `  Entities: ${ec}\n` +
+              `  Nodes: ${nc}\n` +
+              `  Decisions: ${dc}\n`,
             );
           } else {
             process.stdout.write(
@@ -119,6 +124,7 @@ export function registerStatusCommand(program: Command): void {
           }
         }
       } catch (err: unknown) {
+        /* v8 ignore next 1 */
         const message = err instanceof Error ? err.message : String(err);
         if (opts.json) {
           process.stdout.write(

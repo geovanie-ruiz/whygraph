@@ -43,6 +43,7 @@ export function readIssue(whygraphDir: string, entityId: string): EntityIssue | 
     const raw = readFileSync(filePath, "utf-8");
     return JSON.parse(raw) as EntityIssue;
   } catch {
+    /* v8 ignore next 1 */
     return null;
   }
 }

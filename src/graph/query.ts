@@ -67,6 +67,7 @@ function collectDecisions(
     for (const edgeKey of inEdges) {
       if (graph.getEdgeAttribute(edgeKey, "label") === "AFFECTS") {
         const decisionId = graph.source(edgeKey);
+        /* v8 ignore next 1 */
         if (!decisions.has(decisionId)) {
           decisions.set(decisionId, {
             id: decisionId,

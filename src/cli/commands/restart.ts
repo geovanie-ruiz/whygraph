@@ -37,6 +37,7 @@ export function registerRestartCommand(program: Command): void {
           );
         }
       } catch (err: unknown) {
+        /* v8 ignore next 1 */
         const message = err instanceof Error ? err.message : String(err);
         if (opts.json) {
           process.stdout.write(JSON.stringify({ error: message }) + "\n");

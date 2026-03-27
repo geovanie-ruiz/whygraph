@@ -8,7 +8,7 @@
 
 > Whygraph captures the architectural decisions behind your codebase — the tradeoffs accepted, the alternatives rejected, the patterns you deliberately chose — and makes them queryable by AI agents before they write a single line.
 
-<!-- [SCREENSHOT: graph visualization with App node at center, features and components radiating outward, decision nodes connected via AFFECTS edges, dark theme] -->
+![Whygraph visualization](https://raw.githubusercontent.com/geovanie-ruiz/whygraph/main/docs/whygraph.png)
 
 ---
 
@@ -30,7 +30,7 @@ npx whygraph up
 
 `init` walks you through environment selection, registers the MCP server, and writes agent instructions to `CLAUDE.md` or `AGENTS.md`. `up` starts the server in the background.
 
-```
+```text
 whygraph server running at http://localhost:4777
 Watching .whygraph/graph/ — 0 entities loaded
 ```
@@ -45,7 +45,9 @@ When an agent is about to modify `src/auth/session.ts`, it calls `whygraph_conte
 
 ```json
 {
-  "nodes": [{ "id": "wg-sess", "label": "Component", "name": "Session Management" }],
+  "nodes": [
+    { "id": "wg-sess", "label": "Component", "name": "Session Management" }
+  ],
   "decisions": [
     {
       "id": "wg-d001",
@@ -68,14 +70,14 @@ The agent knows what was decided, why, what was traded away, and what was reject
 
 Whygraph exposes six MCP tools for agent integration. Read tools are always available. Write tools require strict mode (`whygraph config --mcp-mode strict`).
 
-| Tool | Mode | Description |
-| ---- | ---- | ----------- |
-| `whygraph_context(file, symbol?)` | read | Get decisions affecting the code you're about to modify |
-| `whygraph_get_decisions(filters)` | read | Query decisions by status, tags, or date range |
-| `whygraph_get_gaps(limit?)` | read | Find structural nodes with no recorded decisions |
-| `whygraph_list_nodes(filters)` | read | List app, feature, and component nodes |
-| `whygraph_create_decision(...)` | write | Create a decision with full validation |
-| `whygraph_create_node(...)` | write | Create a structural node |
+| Tool                              | Mode  | Description                                             |
+| --------------------------------- | ----- | ------------------------------------------------------- |
+| `whygraph_context(file, symbol?)` | read  | Get decisions affecting the code you're about to modify |
+| `whygraph_get_decisions(filters)` | read  | Query decisions by status, tags, or date range          |
+| `whygraph_get_gaps(limit?)`       | read  | Find structural nodes with no recorded decisions        |
+| `whygraph_list_nodes(filters)`    | read  | List app, feature, and component nodes                  |
+| `whygraph_create_decision(...)`   | write | Create a decision with full validation                  |
+| `whygraph_create_node(...)`       | write | Create a structural node                                |
 
 In default mode, agents write decision files directly to `.whygraph/graph/`. The file watcher picks them up, validates, and flags issues as JSON sidecars.
 
@@ -85,12 +87,12 @@ In default mode, agents write decision files directly to `.whygraph/graph/`. The
 
 Whygraph works with any AI development environment.
 
-| Platform | Agent Instructions | MCP Registration |
-| -------- | ------------------ | ---------------- |
-| Claude Code | `CLAUDE.md` | Auto-registered via `claude mcp add` |
-| Cursor | `AGENTS.md` | `.cursor/mcp.json` (written by `init`) |
-| Copilot | `AGENTS.md` | `.vscode/mcp.json` (written by `init`) |
-| Other | `AGENTS.md` | `MCP_SETUP.md` with manual instructions |
+| Platform    | Agent Instructions | MCP Registration                        |
+| ----------- | ------------------ | --------------------------------------- |
+| Claude Code | `CLAUDE.md`        | Auto-registered via `claude mcp add`    |
+| Cursor      | `AGENTS.md`        | `.cursor/mcp.json` (written by `init`)  |
+| Copilot     | `AGENTS.md`        | `.vscode/mcp.json` (written by `init`)  |
+| Other       | `AGENTS.md`        | `MCP_SETUP.md` with manual instructions |
 
 **Claude Code** gets the deepest integration: MCP auto-registration, strict mode write tools, and instructions baked directly into `CLAUDE.md`.
 
@@ -102,7 +104,7 @@ Whygraph works with any AI development environment.
 
 Whygraph models your application as a hierarchy of nodes with decisions attached to the nodes they affect.
 
-```
+```text
 App: MyProject
 ├── Feature: Auth
 │   ├── Component: Session Management
@@ -127,19 +129,19 @@ Decisions are never deleted. A superseded decision stays in the graph with a `SU
 
 ## CLI
 
-| Command | Description |
-| ------- | ----------- |
-| `whygraph init` | Set up whygraph: choose environment, register MCP, write agent instructions |
-| `whygraph up` | Start the server in the background |
-| `whygraph down` | Stop the server |
-| `whygraph restart` | Stop and restart the server |
-| `whygraph serve` | Start the server in the foreground |
-| `whygraph status` | Check server status and entity counts |
-| `whygraph viz` | Open the graph visualization in a browser |
-| `whygraph issues` | List and interactively resolve validation issues |
-| `whygraph validate` | Validate all entities and cross-references |
-| `whygraph config [--flag val]` | View or modify configuration |
-| `whygraph mcp` | Start the MCP stdio server |
+| Command                        | Description                                                                 |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `whygraph init`                | Set up whygraph: choose environment, register MCP, write agent instructions |
+| `whygraph up`                  | Start the server in the background                                          |
+| `whygraph down`                | Stop the server                                                             |
+| `whygraph restart`             | Stop and restart the server                                                 |
+| `whygraph serve`               | Start the server in the foreground                                          |
+| `whygraph status`              | Check server status and entity counts                                       |
+| `whygraph viz`                 | Open the graph visualization in a browser                                   |
+| `whygraph issues`              | List and interactively resolve validation issues                            |
+| `whygraph validate`            | Validate all entities and cross-references                                  |
+| `whygraph config [--flag val]` | View or modify configuration                                                |
+| `whygraph mcp`                 | Start the MCP stdio server                                                  |
 
 All commands accept `--json` for programmatic output.
 

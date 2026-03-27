@@ -106,6 +106,24 @@ describe("detectSupersedeCandidates", () => {
     expect(result).toEqual([]);
   });
 
+  it("uses first decision as newer when first was created after second", () => {
+    const dec1 = makeDecision({
+      id: "wg-dec1",
+      affects: ["wg-feat1", "wg-feat2"],
+      created_at: "2026-03-28T00:00:00Z", // newer
+    });
+    const dec2 = makeDecision({
+      id: "wg-dec2",
+      affects: ["wg-feat2", "wg-feat3"],
+      created_at: "2026-03-20T00:00:00Z", // older
+    });
+
+    const result = detectSupersedeCandidates(toMap([dec1, dec2]));
+    expect(result).toHaveLength(1);
+    expect(result[0].newDecisionId).toBe("wg-dec1");
+    expect(result[0].existingDecisionId).toBe("wg-dec2");
+  });
+
   it("excludes superseded-status decisions", () => {
     const dec1 = makeDecision({
       id: "wg-dec1",

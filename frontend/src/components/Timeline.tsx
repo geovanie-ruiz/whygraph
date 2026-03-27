@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import type { Entity } from "../lib/store.js";
 import "../styles/components/timeline.css";
 
@@ -13,6 +13,10 @@ export function getTimestamps(entities: Map<string, Entity>): number[] {
   for (const entity of entities.values()) {
     if (entity.created_at) {
       const ts = new Date(entity.created_at).getTime();
+      if (!isNaN(ts)) seen.add(ts);
+    }
+    if (entity.removed_at) {
+      const ts = new Date(entity.removed_at).getTime();
       if (!isNaN(ts)) seen.add(ts);
     }
   }
@@ -46,27 +50,87 @@ export function Timeline({
   onFilterChange,
 }: TimelineProps) {
   const timestamps = useMemo(() => getTimestamps(entities), [entities]);
+  const timestampsRef = useRef(timestamps);
+  timestampsRef.current = timestamps;
 
-  const min = timestamps.length > 0 ? timestamps[0] : 0;
-  const max = timestamps.length > 0 ? timestamps[timestamps.length - 1] : 0;
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const playIndexRef = useRef<number>(0);
+
+  const stopPlay = useCallback(() => {
+    if (playTimerRef.current !== null) {
+      clearInterval(playTimerRef.current);
+      playTimerRef.current = null;
+    }
+    setIsPlaying(false);
+  }, []);
 
   const handleSliderChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = Number(e.target.value);
-      onFilterChange(value);
+      stopPlay();
+      const index = Number(e.target.value);
+      onFilterChange(timestampsRef.current[index]);
     },
-    [onFilterChange],
+    [onFilterChange, stopPlay],
   );
 
   const handleLiveClick = useCallback(() => {
+    stopPlay();
     onFilterChange(null);
-  }, [onFilterChange]);
+  }, [onFilterChange, stopPlay]);
+
+  const handlePlayPause = useCallback(() => {
+    if (isPlaying) {
+      stopPlay();
+      return;
+    }
+
+    const ts = timestampsRef.current;
+
+    // Find start: if live or at last frame, restart from beginning
+    let startIndex = filterTimestamp === null
+      ? 0
+      : ts.indexOf(filterTimestamp);
+
+    if (startIndex < 0 || startIndex >= ts.length - 1) {
+      startIndex = 0;
+    }
+
+    playIndexRef.current = startIndex;
+    setIsPlaying(true);
+    onFilterChange(ts[startIndex]);
+
+    playTimerRef.current = setInterval(() => {
+      playIndexRef.current += 1;
+      const current = timestampsRef.current;
+      if (playIndexRef.current >= current.length) {
+        clearInterval(playTimerRef.current!);
+        playTimerRef.current = null;
+        setIsPlaying(false);
+        onFilterChange(null);
+        return;
+      }
+      onFilterChange(current[playIndexRef.current]);
+    }, 1000);
+  }, [isPlaying, filterTimestamp, onFilterChange, stopPlay]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (playTimerRef.current !== null) clearInterval(playTimerRef.current);
+    };
+  }, []);
 
   if (timestamps.length < 2) {
     return null;
   }
 
-  const currentValue = filterTimestamp ?? max;
+  // Map filterTimestamp back to an index for the slider
+  const lastIndex = timestamps.length - 1;
+  const currentIndex = filterTimestamp === null
+    ? lastIndex
+    : Math.max(0, timestamps.indexOf(filterTimestamp));
+
   const isLive = filterTimestamp === null;
 
   return (
@@ -74,18 +138,26 @@ export function Timeline({
       <label htmlFor="timeline-slider" className="timeline__label">
         Timeline:
       </label>
+      <button
+        className="timeline__play-btn"
+        data-testid="timeline-play"
+        onClick={handlePlayPause}
+      >
+        {isPlaying ? "⏸" : "▶"}
+      </button>
       <input
         id="timeline-slider"
         className="timeline__slider"
         data-testid="timeline-slider"
         type="range"
-        min={min}
-        max={max}
-        value={currentValue}
+        min={0}
+        max={lastIndex}
+        step={1}
+        value={currentIndex}
         onChange={handleSliderChange}
       />
       <span className="timeline__value" data-testid="timeline-label">
-        {isLive ? "Live" : formatTimestamp(currentValue)}
+        {formatTimestamp(timestamps[currentIndex])}
       </span>
       <button
         className="timeline__live-btn"

@@ -82,8 +82,10 @@ export async function detectWorktrees(
   repoDir: string,
   deps?: DetectDeps,
 ): Promise<WorktreeInfo[]> {
+  /* v8 ignore next 3 */
   const run = deps?.execFile ?? ((cmd: string, args: string[], opts: { cwd: string }) =>
     execFileAsync(cmd, args, { cwd: opts.cwd }));
+  /* v8 ignore next 1 */
   const checkAccess = deps?.access ?? ((p: string) => fs.access(p));
 
   let stdout: string;

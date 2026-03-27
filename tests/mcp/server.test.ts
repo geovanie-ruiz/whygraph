@@ -113,6 +113,12 @@ describe("MCP server tools", () => {
       const body = JSON.parse((mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string);
       expect(body.variables).toEqual({});
     });
+
+    it("returns error from get_decisions when server unreachable", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+      const result = await client.callTool({ name: "whygraph_get_decisions", arguments: {} });
+      expect(result.isError).toBe(true);
+    });
   });
 
   describe("whygraph_get_gaps", () => {
@@ -181,6 +187,26 @@ describe("MCP server tools", () => {
       expect(content[0].text).toContain("Cannot connect to whygraph server");
       expect(content[0].text).toContain("whygraph serve");
       expect(result.isError).toBe(true);
+    });
+
+    it("returns error from get_gaps when server unreachable", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+      const result = await client.callTool({ name: "whygraph_get_gaps", arguments: {} });
+
+      expect(result.isError).toBe(true);
+      const content = result.content as Array<{ type: string; text: string }>;
+      expect(content[0].text).toContain("Cannot connect");
+    });
+
+    it("returns error from list_nodes when server unreachable", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+      const result = await client.callTool({ name: "whygraph_list_nodes", arguments: {} });
+
+      expect(result.isError).toBe(true);
+      const content = result.content as Array<{ type: string; text: string }>;
+      expect(content[0].text).toContain("Cannot connect");
     });
 
     it("returns GraphQL errors clearly", async () => {

@@ -93,6 +93,15 @@ describe("runValidate", () => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
+  it("returns zero errors when graph directory does not exist", async () => {
+    // .whygraph exists but graph subdir does not
+    mkdirSync(join(tempDir, ".whygraph"), { recursive: true });
+    const result = await runValidate(tempDir);
+    expect(result.filesChecked).toBe(0);
+    expect(result.entitiesParsed).toBe(0);
+    expect(result.errors).toEqual([]);
+  });
+
   it("returns zero errors for an empty directory", async () => {
     mkdirSync(join(tempDir, ".whygraph", "graph"), { recursive: true });
     const result = await runValidate(tempDir);

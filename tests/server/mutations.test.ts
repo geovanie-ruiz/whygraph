@@ -60,6 +60,14 @@ describe("GraphQL mutations", () => {
     await httpServer.stop();
   });
 
+  describe("ping", () => {
+    it("ping mutation returns true", async () => {
+      const body = await gql(baseUrl, `mutation { ping }`);
+      expect(body.errors).toBeUndefined();
+      expect(body.data?.ping).toBe(true);
+    });
+  });
+
   describe("createNode", () => {
     it("creates a structural node and returns it", async () => {
       const body = await gql(baseUrl, `
@@ -265,6 +273,30 @@ describe("GraphQL mutations", () => {
       expect(body.errors).toBeUndefined();
       const entity = body.data?.updateEntity as Record<string, unknown>;
       expect(entity.removed_at).toBe("2026-03-24T00:00:00Z");
+    });
+
+    it("updates entity refs", async () => {
+      const createBody = await gql(baseUrl, `
+        mutation {
+          createNode(label: "Feature", name: "Auth") {
+            id
+          }
+        }
+      `);
+      const id = (createBody.data?.createNode as Record<string, unknown>).id;
+
+      const body = await gql(baseUrl, `
+        mutation {
+          updateEntity(id: "${id}", refs: [{ file: "src/auth.ts", symbol: "login" }]) {
+            __typename
+            ... on StructuralNode { id refs { file symbol } }
+          }
+        }
+      `);
+
+      expect(body.errors).toBeUndefined();
+      const entity = body.data?.updateEntity as Record<string, unknown>;
+      expect(entity.refs).toEqual([{ file: "src/auth.ts", symbol: "login" }]);
     });
 
     it("returns error for nonexistent entity", async () => {

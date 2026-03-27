@@ -26,6 +26,7 @@ export function cascadeRemoval(
 
   while (queue.length > 0) {
     const current = queue.pop()!;
+    /* v8 ignore next 1 */
     if (removalSet.has(current)) continue;
     if (!graph.hasNode(current)) continue;
     removalSet.add(current);

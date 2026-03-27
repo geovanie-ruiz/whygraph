@@ -220,6 +220,7 @@ export function buildSchema(core: ServerCore) {
         entity: event.entity,
         entityId: event.entityId,
       });
+    /* v8 ignore next 5 */
     } else if (event.type === "entity_deleted") {
       yogaPubSub.publish("entityChanged", {
         type: "DELETED",

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import * as d3 from "d3";
 import type {
   Entity,
@@ -16,9 +16,16 @@ function mulberry32(seed: number) {
   };
 }
 
+export interface GraphViewHandle {
+  zoomToNode: (id: string) => void;
+}
+
 export interface GraphViewProps {
   entities: Map<string, Entity>;
   onSelect: (entityId: string) => void;
+  onDeselect?: () => void;
+  selectedEntityId?: string | null;
+  onFitAll?: () => void;
   highlightedIds?: Set<string>;
   staleRefIds?: Set<string>;
   errorIds?: Set<string>;
@@ -77,6 +84,69 @@ function linkStroke(type: string): { dash: string; color: string } {
   }
 }
 
+// Split a label into lines at word / camelCase boundaries, max maxChars per line.
+function splitLabel(text: string, maxChars = 14): string[] {
+  if (text.length <= maxChars) return [text];
+  const spaced = text.replace(/([a-z])([A-Z])/g, "$1 $2");
+  const words = spaced.split(/[\s\-_]+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (!current) {
+      current = word;
+    } else if ((current + " " + word).length <= maxChars) {
+      current += " " + word;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.slice(0, 3);
+}
+
+// Compute where to anchor a node's label so it points away from its neighbours.
+function computeLabelOffset(
+  node: GraphNode,
+  all: GraphNode[],
+): { dx: number; dy: number; anchor: "start" | "middle" | "end" } {
+  const dist = nodeRadius(node.label) + 16;
+  const nx = node.x ?? 0;
+  const ny = node.y ?? 0;
+
+  const nearby = all.filter(
+    (n) => n.id !== node.id && Math.hypot((n.x ?? 0) - nx, (n.y ?? 0) - ny) < 180,
+  );
+
+  if (nearby.length === 0) return { dx: 0, dy: dist, anchor: "middle" };
+
+  const cx = nearby.reduce((s, n) => s + (n.x ?? 0), 0) / nearby.length;
+  const cy = nearby.reduce((s, n) => s + (n.y ?? 0), 0) / nearby.length;
+  const vx = nx - cx;
+  const vy = ny - cy;
+  const mag = Math.hypot(vx, vy);
+
+  if (mag < 5) return { dx: 0, dy: dist, anchor: "middle" };
+
+  const dx = (vx / mag) * dist;
+  const dy = (vy / mag) * dist;
+  const anchor = dx > dist * 0.35 ? "start" : dx < -dist * 0.35 ? "end" : "middle";
+  return { dx, dy, anchor };
+}
+
+// Apply label offsets to the text + tspan elements in a node selection.
+function applyLabelPositions(
+  nodes: GraphNode[],
+  sel: d3.Selection<SVGGElement, GraphNode, SVGGElement, unknown>,
+): void {
+  sel.select<SVGTextElement>("text").each(function (d) {
+    const { dx, dy, anchor } = computeLabelOffset(d, nodes);
+    const t = d3.select(this);
+    t.attr("text-anchor", anchor).attr("x", dx).attr("y", dy);
+    t.selectAll("tspan").attr("x", dx);
+  });
+}
+
 function deriveGraphData(entities: Map<string, Entity>): {
   nodes: GraphNode[];
   links: GraphLink[];
@@ -131,20 +201,109 @@ function getThemeColor(varName: string, fallback: string): string {
   return value || fallback;
 }
 
-export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, errorIds }: GraphViewProps) {
+export const GraphView = forwardRef<GraphViewHandle, GraphViewProps>(function GraphView(
+  { entities, onSelect, onDeselect, selectedEntityId, onFitAll, highlightedIds, staleRefIds, errorIds }: GraphViewProps,
+  ref,
+) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
   const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const initializedRef = useRef(false);
   const sizeRef = useRef({ width: 800, height: 600 });
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const prevEntityIdsRef = useRef<Set<string>>(new Set());
+  const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const focusBlurRef = useRef<HTMLDivElement>(null);
+  const repositionSpotlightRef = useRef<(() => void) | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const onFitAllRef = useRef(onFitAll);
+  onFitAllRef.current = onFitAll;
+  const onDeselectRef = useRef(onDeselect);
+  onDeselectRef.current = onDeselect;
+  const selectedEntityIdRef = useRef<string | null>(null);
+  selectedEntityIdRef.current = selectedEntityId ?? null;
+
+  // Zoom to fit all known node positions into the viewport with padding.
+  // Used both for the centering button and automatically after each baked
+  // entity update, so the entire visible graph always stays in frame.
+  const fitAll = useCallback(() => {
+    const svgEl = svgRef.current;
+    const zoom = zoomRef.current;
+    if (!svgEl || !zoom) return;
+
+    const positions = Array.from(nodePositionsRef.current.values());
+    if (positions.length === 0) return;
+
+    const { width, height } = sizeRef.current;
+    const padding = 60;
+    const xs = positions.map((p) => p.x);
+    const ys = positions.map((p) => p.y);
+    const minX = Math.min(...xs) - padding;
+    const maxX = Math.max(...xs) + padding;
+    const minY = Math.min(...ys) - padding;
+    const maxY = Math.max(...ys) + padding;
+
+    const contentCx = (minX + maxX) / 2;
+    const contentCy = (minY + maxY) / 2;
+    const scale = Math.min(width / (maxX - minX), height / (maxY - minY), 2);
+
+    // d3.zoomIdentity.translate(tx,ty).scale(s) produces {k:s, x:tx, y:ty}.
+    // SVG transform is translate(tx,ty) scale(s), so content point cx maps to
+    // screen position cx*s + tx. To place contentC at viewport center:
+    //   contentC * s + tx = viewport/2  →  tx = viewport/2 - contentC * s
+    const tx = width / 2 - contentCx * scale;
+    const ty = height / 2 - contentCy * scale;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    d3.select(svgEl)
+      .transition()
+      .duration(reducedMotion ? 0 : 800)
+      .ease(d3.easeCubicInOut)
+      .call(zoom.transform as never, d3.zoomIdentity.translate(tx, ty).scale(scale));
+  }, []);
+
+  const zoomToNode = useCallback((id: string) => {
+    const pos = nodePositionsRef.current.get(id);
+    if (!pos || !svgRef.current || !zoomRef.current) return;
+    const { width, height } = sizeRef.current;
+    const currentScale = d3.zoomTransform(svgRef.current).k;
+    // Zoom to at least 1.5× so labels and nearby nodes are clearly readable.
+    // If already zoomed in further, stay there.
+    const targetScale = Math.max(currentScale, 1.5);
+    const tx = width / 2 - pos.x * targetScale;
+    const ty = height / 2 - pos.y * targetScale;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    d3.select(svgRef.current)
+      .transition()
+      .duration(reducedMotion ? 0 : 600)
+      .ease(d3.easeCubicInOut)
+      .call(zoomRef.current.transform as never, d3.zoomIdentity.translate(tx, ty).scale(targetScale));
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    fitAll() {
+      fitAll();
+      onFitAllRef.current?.();
+    },
+    zoomToNode(id: string) {
+      zoomToNode(id);
+    },
+  }), [fitAll, zoomToNode]);
+
+  const redrawSelectionRingRef = useRef<(() => void) | null>(null);
 
   const updateLabelColors = useCallback(() => {
     const g = gRef.current;
     if (!g) return;
     const labelColor = getThemeColor("--text-secondary", "#8FA3B8");
-    g.select(".nodes").selectAll<SVGTextElement, GraphNode>("text").attr("fill", labelColor);
+    const bgColor = getThemeColor("--surface-0", "#0f1923");
+    g.select(".nodes").selectAll<SVGTextElement, GraphNode>("text")
+      .attr("fill", labelColor)
+      .attr("stroke", bgColor);
+    // Re-draw selection ring so its colors reflect the new theme
+    redrawSelectionRingRef.current?.();
   }, []);
 
   useEffect(() => {
@@ -155,6 +314,8 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, err
     const { width, height } = sizeRef.current;
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
+    svg.append("defs");
+
     const g = svg.append("g");
     gRef.current = g;
 
@@ -163,12 +324,34 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, err
       .scaleExtent([0.1, 4])
       .on("zoom", (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
         g.attr("transform", event.transform.toString());
+        repositionSpotlightRef.current?.();
       });
 
+    zoomRef.current = zoom;
     svg.call(zoom as never);
+
+    // Click on empty graph space clears selection
+    svg.on("click", () => onDeselectRef.current?.());
 
     g.append("g").attr("class", "links");
     g.append("g").attr("class", "nodes");
+
+    // The repositioner reads refs directly so it's defined once and always current.
+    // It updates the CSS mask-image on the focus-blur overlay div, punching a
+    // transparent "eye" at the selected node's screen-space position so that
+    // area stays sharp while the backdrop-filter blurs everything outside it.
+    repositionSpotlightRef.current = () => {
+      const el = focusBlurRef.current;
+      const selId = selectedEntityIdRef.current;
+      const pos = selId ? nodePositionsRef.current.get(selId) : null;
+      if (!pos || !svgRef.current || !el) return;
+      const t = d3.zoomTransform(svgRef.current);
+      const sx = pos.x * t.k + t.x;
+      const sy = pos.y * t.k + t.y;
+      const grad = `radial-gradient(circle at ${sx}px ${sy}px, transparent 0px, transparent 130px, black 230px)`;
+      el.style.maskImage = grad;
+      el.style.webkitMaskImage = grad;
+    };
   }, []);
 
   useEffect(() => {
@@ -190,6 +373,17 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, err
   }, []);
 
   useEffect(() => {
+    const el = focusBlurRef.current;
+    if (!el) return;
+    if (selectedEntityId) {
+      repositionSpotlightRef.current?.();
+      el.style.opacity = "1";
+    } else {
+      el.style.opacity = "0";
+    }
+  }, [selectedEntityId]);
+
+  useEffect(() => {
     const observer = new MutationObserver(() => updateLabelColors());
     observer.observe(document.documentElement, {
       attributes: true,
@@ -208,6 +402,13 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, err
     const cy = height / 2;
     const random = mulberry32(42);
 
+    const prevIds = prevEntityIdsRef.current;
+    const isInitialLoad = prevIds.size === 0;
+    const addedIds = isInitialLoad
+      ? []
+      : newNodes.filter((n) => !prevIds.has(n.id)).map((n) => n.id);
+    prevEntityIdsRef.current = new Set(newNodes.map((n) => n.id));
+
     for (const n of newNodes) {
       if (n.label === "App") {
         n.x = cx;
@@ -215,8 +416,14 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, err
         n.fx = cx;
         n.fy = cy;
       } else {
-        n.x = cx + (random() - 0.5) * 20;
-        n.y = cy + (random() - 0.5) * 20;
+        const saved = nodePositionsRef.current.get(n.id);
+        if (saved) {
+          n.x = saved.x;
+          n.y = saved.y;
+        } else {
+          n.x = cx + (random() - 0.5) * 20;
+          n.y = cy + (random() - 0.5) * 20;
+        }
       }
     }
 
@@ -234,6 +441,20 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, err
       .alphaDecay(0.012)
       .alphaMin(0.001)
       .velocityDecay(0.6);
+
+    if (!isInitialLoad) {
+      // Baked path: pre-tick to convergence synchronously, then render once
+      simulation.stop();
+      const tickCount = Math.ceil(
+        Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay()),
+      );
+      simulation.tick(tickCount);
+      for (const n of simulation.nodes()) {
+        if (n.x != null && n.y != null) {
+          nodePositionsRef.current.set(n.id, { x: n.x, y: n.y });
+        }
+      }
+    }
 
     simulationRef.current = simulation;
 
@@ -288,33 +509,70 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, err
           .attr("stroke-width", 1.5);
       }
 
-      el.append("text")
-        .attr("dy", nodeRadius(d.label) + 14)
+      const textEl = el.append("text")
         .attr("text-anchor", "middle")
+        .attr("x", 0)
+        .attr("y", nodeRadius(d.label) + 16)
         .attr("font-size", "11px")
         .attr("fill", getThemeColor("--text-secondary", "#8FA3B8"))
-        .attr("pointer-events", "none")
-        .text(d.displayName);
+        .attr("stroke", getThemeColor("--surface-0", "#0f1923"))
+        .attr("stroke-width", 3)
+        .attr("stroke-linejoin", "round")
+        .attr("paint-order", "stroke")
+        .attr("pointer-events", "none");
+
+      splitLabel(d.displayName).forEach((line, i) => {
+        textEl.append("tspan")
+          .attr("x", 0)
+          .attr("dy", i === 0 ? 0 : "1.2em")
+          .text(line);
+      });
     });
 
     const allNodes = nodeEnter.merge(nodeSelection);
 
-    allNodes.on("click", (_event, d) => {
+    allNodes.on("click", (event, d) => {
+      event.stopPropagation();
       onSelectRef.current(d.id);
+      zoomToNode(d.id);
     });
 
-    simulation.on("tick", () => {
+    let panTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    if (isInitialLoad) {
+      // Animated path: RAF simulation drives DOM; save positions each tick
+      simulation.on("tick", () => {
+        allLinks
+          .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
+          .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
+          .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
+          .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
+        allNodes.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
+        for (const n of simulation.nodes()) {
+          if (n.x != null && n.y != null) {
+            nodePositionsRef.current.set(n.id, { x: n.x, y: n.y });
+          }
+        }
+        applyLabelPositions(simulation.nodes(), allNodes);
+      });
+    } else {
+      // Baked path: render pre-computed positions once
       allLinks
         .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
         .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
         .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
         .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
-
       allNodes.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
-    });
+      applyLabelPositions(simulation.nodes(), allNodes);
+
+      if (addedIds.length > 0) {
+        panTimeoutId = setTimeout(() => fitAll(), 50);
+      }
+    }
 
     return () => {
       simulation.stop();
+      if (panTimeoutId !== null) clearTimeout(panTimeoutId);
     };
   }, [entities]);
 
@@ -381,11 +639,86 @@ export function GraphView({ entities, onSelect, highlightedIds, staleRefIds, err
     }
   }, [highlightedIds, staleRefIds, errorIds]);
 
+  // Selection ring + z-order: append a highlight ring to the selected node
+  // and raise its group to the top of the SVG stack.
+  // The draw function is also stored in a ref so theme changes can re-invoke it.
+  useEffect(() => {
+    const draw = () => {
+      const g = gRef.current;
+    if (!g) return;
+
+    const allNodes = g
+      .select<SVGGElement>(".nodes")
+      .selectAll<SVGGElement, GraphNode>("g.node-group");
+
+    allNodes.selectAll(".selection-ring").remove();
+
+    if (!selectedEntityId) return;
+
+    const target = allNodes.filter((d) => d.id === selectedEntityId);
+    if (target.empty()) return;
+
+    // Read theme-aware colors so the ring is legible on both dark and light backgrounds.
+    // The separation ring (surface-0 color) carves a gap between node and ring.
+    // The accent ring uses the primary color, which has contrast on both themes.
+    const sepColor = getThemeColor("--surface-0", "#0f1923");
+    const ringColor = getThemeColor("--color-primary", "#4e8ef7");
+
+    // Separation gap — background color, punches visual space between node and ring
+    target
+      .append("circle")
+      .attr("class", "selection-ring")
+      .attr("r", (d) => nodeRadius(d.label) + 5)
+      .attr("fill", "none")
+      .attr("stroke", sepColor)
+      .attr("stroke-width", 3)
+      .attr("pointer-events", "none");
+
+    // Outer soft glow
+    target
+      .append("circle")
+      .attr("class", "selection-ring")
+      .attr("r", (d) => nodeRadius(d.label) + 11)
+      .attr("fill", "none")
+      .attr("stroke", ringColor)
+      .attr("stroke-width", 5)
+      .attr("opacity", 0.3)
+      .attr("pointer-events", "none");
+
+    // Crisp accent ring
+    target
+      .append("circle")
+      .attr("class", "selection-ring")
+      .attr("r", (d) => nodeRadius(d.label) + 8)
+      .attr("fill", "none")
+      .attr("stroke", ringColor)
+      .attr("stroke-width", 2)
+      .attr("pointer-events", "none");
+
+    // Bring the selected node group to the front of the SVG paint order
+    target.raise();
+    };
+
+    redrawSelectionRingRef.current = draw;
+    draw();
+  }, [selectedEntityId]);
+
   return (
-    <svg
-      ref={svgRef as React.RefObject<SVGSVGElement>}
-      data-testid="graph-view"
-      className="graph-svg"
-    />
+    <div className="graph-container">
+      <svg
+        ref={svgRef as React.RefObject<SVGSVGElement>}
+        data-testid="graph-view"
+        className="graph-svg"
+      />
+      <div ref={focusBlurRef} className="focus-blur-overlay" />
+      <button
+        className="graph-center-btn"
+        onClick={() => { fitAll(); onFitAllRef.current?.(); }}
+        title="Fit graph to view"
+        aria-label="Fit graph to view"
+      >
+        ⊙
+      </button>
+    </div>
   );
-}
+});

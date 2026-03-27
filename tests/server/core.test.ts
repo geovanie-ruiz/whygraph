@@ -206,6 +206,38 @@ describe("ServerCore", () => {
     });
   });
 
+  describe("stale issue cleanup", () => {
+    it("deletes issue for entity no longer in graph on load", async () => {
+      // Write an issue file for an entity that doesn't exist in graph
+      const issuesDir = path.join(whygraphDir, "issues");
+      await fs.mkdir(issuesDir, { recursive: true });
+      const staleIssue = {
+        entityId: "wg-stale",
+        errors: [{ field: "title", message: "missing title", severity: "error" }],
+        createdAt: "2026-03-24T00:00:00Z",
+        updatedAt: "2026-03-24T00:00:00Z",
+      };
+      await fs.writeFile(
+        path.join(issuesDir, "wg-stale.json"),
+        JSON.stringify(staleIssue, null, 2),
+      );
+
+      const core = new ServerCore(whygraphDir);
+      await core.load();
+
+      // After load, stale issue should be deleted since entity doesn't exist
+      const issueFile = path.join(issuesDir, "wg-stale.json");
+      try {
+        await fs.access(issueFile);
+        // If we get here, the file still exists — that's a test failure
+        expect(true).toBe(false);
+      } catch {
+        // File deleted — expected
+        expect(true).toBe(true);
+      }
+    });
+  });
+
   describe("invalid files", () => {
     it("skips invalid files with warning, does not crash", async () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -226,6 +258,22 @@ describe("ServerCore", () => {
       await core.load();
 
       expect(core.getAllEntities()).toHaveLength(1);
+    });
+
+    it("warns and skips file that cannot be read (EISDIR)", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      // Create a directory with .md extension — readFile on a dir throws EISDIR
+      await fs.mkdir(path.join(graphDir, "wg-dir.md"), { recursive: true });
+      await fs.writeFile(path.join(graphDir, "wg-feat1.md"), structuralMd("wg-feat1"));
+      const core = new ServerCore(whygraphDir);
+      await core.load();
+
+      expect(core.getAllEntities()).toHaveLength(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Error reading file"),
+        expect.anything(),
+      );
+      warnSpy.mockRestore();
     });
 
     it("handles missing graph directory gracefully", async () => {

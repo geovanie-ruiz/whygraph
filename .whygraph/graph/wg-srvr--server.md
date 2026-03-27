@@ -15,8 +15,8 @@ refs:
   - file: src/server/etag.ts
   - file: src/server/derived.ts
   - file: src/server/stale-refs.ts
-created_at: "2026-03-24T01:02:00Z"
-updated_at: "2026-03-24T01:02:00Z"
+created_at: "2026-03-21T18:00:00Z"
+updated_at: "2026-03-21T18:00:00Z"
 ---
 
 Long-running HTTP server with GraphQL API, file watchers, worktree detection, and in-memory state management.

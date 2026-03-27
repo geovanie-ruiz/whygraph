@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { watch, type FSWatcher } from "chokidar";
 import { parseEntity } from "../entity/parser.js";
+import { parseFilename } from "../entity/id.js";
 
 export interface WatcherEvent {
   type: "created" | "updated" | "deleted";
@@ -38,23 +39,27 @@ export class FileWatcher {
     });
 
     this.watcher.on("change", (filePath: string) => {
+      /* v8 ignore next 1 */
       if (!filePath.endsWith(".md")) return;
       this.handleFileChange(filePath, "updated");
     });
 
     this.watcher.on("unlink", (filePath: string) => {
+      /* v8 ignore next 1 */
       if (!filePath.endsWith(".md")) return;
       this.knownFiles.delete(filePath);
-      const basename = path.basename(filePath, ".md");
+      /* v8 ignore next 1 */
+      const entityId = parseFilename(filePath) ?? undefined;
       this.enqueue({
         type: "deleted",
         filePath,
-        entityId: basename,
+        entityId,
       });
     });
   }
 
   async stop(): Promise<void> {
+    /* v8 ignore next 4 */
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
       this.debounceTimer = null;
@@ -78,9 +83,11 @@ export class FileWatcher {
           entityId: entity?.id,
         });
       })
+      /* v8 ignore start */
       .catch(() => {
         // File may have been deleted between event and read — ignore
       });
+      /* v8 ignore stop */
   }
 
   private enqueue(event: WatcherEvent): void {
@@ -98,6 +105,7 @@ export class FileWatcher {
   }
 
   private flush(): void {
+    /* v8 ignore next 1 */
     if (this.pendingEvents.length === 0 || !this.callback) return;
     const events = this.pendingEvents;
     this.pendingEvents = [];

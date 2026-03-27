@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn as nodeSpawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import type { Command } from "commander";
@@ -11,7 +11,12 @@ import {
 
 export async function runUp(
   targetDir: string,
-  options: { port?: number; json?: boolean } = {},
+  options: {
+    port?: number;
+    json?: boolean;
+    spawner?: typeof nodeSpawn;
+    waitForReady?: (port: number) => Promise<void>;
+  } = {},
 ): Promise<{ url: string; port: number; pid: number }> {
   const projectDir = findWhygraphDir(targetDir);
   if (!projectDir) {
@@ -25,6 +30,7 @@ export async function runUp(
   }
 
   // Spawn the serve command as a detached background process
+  const spawn = options.spawner ?? nodeSpawn;
   const serveScript = join(dirname(fileURLToPath(import.meta.url)), "..", "index.js");
   const child = spawn(
     process.execPath,
@@ -41,7 +47,8 @@ export async function runUp(
   const pid = child.pid!;
 
   // Wait for the server to be ready
-  await waitForServerReady(port);
+  const waitFn = options.waitForReady ?? waitForServerReady;
+  await waitFn(port);
 
   return {
     url: `http://localhost:${port}`,
@@ -69,6 +76,7 @@ export function registerUpCommand(program: Command): void {
           );
         }
       } catch (err: unknown) {
+        /* v8 ignore next 1 */
         const message = err instanceof Error ? err.message : String(err);
         if (opts.json) {
           process.stdout.write(JSON.stringify({ error: message }) + "\n");

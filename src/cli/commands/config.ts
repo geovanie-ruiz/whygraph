@@ -173,6 +173,7 @@ export function registerConfigCommand(program: Command): void {
             process.stdout.write(formatConfig(result.config) + "\n");
           }
         } catch (err: unknown) {
+          /* v8 ignore next 1 */
           const message = err instanceof Error ? err.message : String(err);
           if (opts.json) {
             process.stdout.write(

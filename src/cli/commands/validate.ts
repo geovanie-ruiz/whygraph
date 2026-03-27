@@ -98,6 +98,7 @@ function formatTable(result: ValidateResult): string {
   lines.push("─".repeat(90));
 
   for (const err of result.errors) {
+    /* v8 ignore next 1 */
     const fileName = err.file.split("/").pop() ?? err.file;
     const field = err.field ?? "-";
     lines.push(

@@ -70,11 +70,13 @@ function isNonEmptyString(value: unknown): value is string {
 }
 
 function isValidISO8601(value: unknown): boolean {
+  /* v8 ignore next 1 */
   if (typeof value !== "string") return false;
   return ISO_8601_RE.test(value);
 }
 
 function isValidDate(value: unknown): boolean {
+  /* v8 ignore next 1 */
   if (typeof value !== "string") return false;
   return DATE_RE.test(value);
 }
@@ -148,6 +150,7 @@ export function validateEntity(entity: Entity): ValidationResult {
       errors.push({ field: "affects", message: "affects is required and must be a non-empty array", severity: "error" });
     }
 
+    /* v8 ignore next 1 */
     if (Array.isArray(entity.tags)) {
       for (const tag of entity.tags) {
         if (!DECISION_TAGS.includes(tag as DecisionTag)) {

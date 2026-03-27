@@ -223,4 +223,35 @@ A graph-based architecture documentation tool.
     const node = entity as StructuralNode;
     expect(node.description).toBe("A graph-based architecture documentation tool.");
   });
+
+  it("returns null for unknown label", () => {
+    const content = `---
+id: wg-xyz1
+label: UnknownType
+name: Something
+status: active
+created_at: "2026-03-24T00:00:00Z"
+updated_at: "2026-03-24T00:00:00Z"
+---
+`;
+    expect(parseEntity(content)).toBeNull();
+  });
+
+  it("returns null for decision with invalid date type", () => {
+    // affects is not an array — triggers the null return in parseDecisionNode
+    const content = `---
+id: wg-bad1
+label: Decision
+title: Bad Decision
+status: active
+date: "2026-03-24"
+affects: "not-an-array"
+tags:
+  - arch
+created_at: "2026-03-24T00:00:00Z"
+updated_at: "2026-03-24T00:00:00Z"
+---
+`;
+    expect(parseEntity(content)).toBeNull();
+  });
 });

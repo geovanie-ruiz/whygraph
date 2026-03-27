@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -153,5 +154,76 @@ describe("runInterview", () => {
     // Only the feature should be created, the component should be skipped
     expect(result.created).toHaveLength(1);
     expect(result.created[0].label).toBe("Feature");
+  });
+
+  it("works when graph directory does not exist", async () => {
+    const whygraphDir = join(tempDir, ".whygraph");
+    mkdirSync(whygraphDir, { recursive: true });
+    // No graph/ subdirectory created
+
+    const result = await runInterview(whygraphDir, {
+      features: [{ name: "Auth" }],
+    });
+
+    expect(result.created).toHaveLength(1);
+    expect(result.gaps).toBe(0);
+  });
+
+  it("creates features without parent when no App node exists", async () => {
+    const whygraphDir = join(tempDir, ".whygraph");
+    const graphDir = join(whygraphDir, "graph");
+    mkdirSync(graphDir, { recursive: true });
+    // No App node — appId will be undefined
+
+    const result = await runInterview(whygraphDir, {
+      features: [{ name: "Auth" }],
+    });
+
+    expect(result.created).toHaveLength(1);
+    const entities = readAllEntities(graphDir);
+    const feature = entities.find((e) => e!.label === "Feature");
+    expect(feature).toBeDefined();
+    // No parent set since no App node
+    expect((feature as StructuralNode).parent).toBeUndefined();
+  });
+
+  it("skips malformed entity files in graph dir", async () => {
+    const whygraphDir = setupWhygraphDir(tempDir);
+    const graphDir = join(whygraphDir, "graph");
+    // Write a malformed .md file — parseEntity will return null
+    writeFileSync(join(graphDir, "wg-bad1--broken.md"), "not yaml at all\nno frontmatter", "utf-8");
+
+    const result = await runInterview(whygraphDir, {
+      features: [{ name: "Auth" }],
+    });
+
+    // Should still succeed despite the malformed file
+    expect(result.created).toHaveLength(1);
+  });
+
+  it("returns gaps=0 and no entities when called with no options", async () => {
+    const whygraphDir = setupWhygraphDir(tempDir);
+
+    const result = await runInterview(whygraphDir);
+
+    expect(result.created).toHaveLength(0);
+    expect(typeof result.gaps).toBe("number");
+  });
+
+  it("creates component with file refs", async () => {
+    const whygraphDir = setupWhygraphDir(tempDir);
+
+    await runInterview(whygraphDir, {
+      features: [{ name: "Auth" }],
+      components: [{ name: "Login", parent: "Auth", files: ["src/login.ts"] }],
+    });
+
+    const graphDir = join(whygraphDir, "graph");
+    const entities = readAllEntities(graphDir);
+    const component = entities.find((e) => e!.label === "Component") as StructuralNode;
+
+    expect(component).toBeDefined();
+    expect(component.refs).toBeDefined();
+    expect(component.refs![0].file).toBe("src/login.ts");
   });
 });
