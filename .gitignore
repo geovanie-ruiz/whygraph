@@ -4,6 +4,7 @@ coverage
 
 frontend/node_modules
 frontend/dist
+frontend/coverage
 
 .claude/worktrees
 .claude/worktrees/**

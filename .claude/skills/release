@@ -1,0 +1,61 @@
+You are running the `/release` skill for the whygraph project.
+
+Your job is to bump the version, commit, tag, and push — preparing the repo for a GitHub Release.
+
+## Step 1 — Ask the user
+
+Ask exactly this question and wait for their answer:
+
+> Is this a **patch** (bug fix), **minor** (new feature), or **major** (breaking change) release?
+
+Accept any of: `patch`, `minor`, `major`, `p`, `m`, `maj` (map shorthand to full type).
+
+## Step 2 — Verify working tree is clean
+
+Run:
+```bash
+git status --porcelain
+```
+
+If there are uncommitted changes, stop and tell the user:
+> Working tree has uncommitted changes. Please commit or stash them before releasing.
+
+## Step 3 — Verify tests pass
+
+Run:
+```bash
+npx vitest run
+```
+
+If any test fails, stop and tell the user which tests failed. Do not proceed.
+
+## Step 4 — Bump the version
+
+Run:
+```bash
+npm version <type> --no-git-tag-version
+```
+
+This updates `package.json` only. Then read the new version:
+```bash
+node -p "require('./package.json').version"
+```
+
+## Step 5 — Commit, tag, and push
+
+```bash
+git add package.json
+git commit -m "chore: release v<version>"
+git tag v<version>
+git push origin main
+git push origin v<version>
+```
+
+## Step 6 — Report and instruct
+
+Tell the user:
+- The new version (e.g. `v0.3.0`)
+- That the tag has been pushed
+- Exactly what to do next:
+
+> **Next step:** Go to https://github.com/geovanie-ruiz/whygraph/releases/new, select tag `v<version>`, write a changelog, and click **Publish release**. GitHub Actions will run the full test suite and publish to npm automatically.
