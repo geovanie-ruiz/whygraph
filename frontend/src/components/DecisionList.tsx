@@ -37,7 +37,15 @@ export interface DecisionSummary {
   affects: string[];
 }
 
-const ALL_TAGS = ["arch", "data", "security", "performance", "integration", "infra", "ux"] as const;
+const ALL_TAGS = [
+  "arch",
+  "data",
+  "security",
+  "performance",
+  "integration",
+  "infra",
+  "ux",
+] as const;
 
 export interface DecisionListProps {
   onSelect?: (decision: DecisionSummary) => void;
@@ -79,10 +87,12 @@ export function DecisionList({ onSelect }: DecisionListProps) {
   }, []);
 
   const decisions: DecisionSummary[] = isSearching
-    ? searchResult.data?.search ?? []
-    : decisionsResult.data?.decisions ?? [];
+    ? (searchResult.data?.search ?? [])
+    : (decisionsResult.data?.decisions ?? []);
 
-  const fetching = isSearching ? searchResult.fetching : decisionsResult.fetching;
+  const fetching = isSearching
+    ? searchResult.fetching
+    : decisionsResult.fetching;
   const error = isSearching ? searchResult.error : decisionsResult.error;
 
   return (
@@ -121,7 +131,9 @@ export function DecisionList({ onSelect }: DecisionListProps) {
         ))}
       </div>
 
-      {error && <div role="alert">Error loading decisions: {error.message}</div>}
+      {error && (
+        <div role="alert">Error loading decisions: {error.message}</div>
+      )}
 
       {fetching && <div>Loading...</div>}
 

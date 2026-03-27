@@ -120,4 +120,55 @@ describe("DetailPanel", () => {
 
     expect(getByText("AuthService")).toBeTruthy();
   });
+
+  it("shows supersedes field when decision has supersedes", () => {
+    const oldDecision = makeDecision({ id: "d-old", title: "Use REST" });
+    const decision = makeDecision({ supersedes: "d-old" });
+    const entities = new Map<string, Entity>([
+      ["d1", decision],
+      ["d-old", oldDecision],
+    ]);
+
+    const { getByText } = render(
+      <DetailPanel entity={decision} entities={entities} onClose={vi.fn()} />,
+    );
+
+    expect(getByText("Supersedes:")).toBeTruthy();
+    expect(getByText("Use REST")).toBeTruthy();
+  });
+
+  it("renders ErrorDetail when errors are passed", () => {
+    const decision = makeDecision();
+    const entities = new Map<string, Entity>([["d1", decision]]);
+    const errors = [
+      { field: "title", message: "Title is required", severity: "error" },
+      { field: "context", message: "Context too short", severity: "warning" },
+    ];
+
+    const { getByText, container } = render(
+      <DetailPanel entity={decision} entities={entities} onClose={vi.fn()} errors={errors} />,
+    );
+
+    expect(container.querySelector(".detail-errors")).toBeTruthy();
+    expect(getByText("Title is required")).toBeTruthy();
+    expect(getByText("Context too short")).toBeTruthy();
+  });
+
+  it("renders null for entity with neither name nor title", () => {
+    const entity = {
+      id: "x1",
+      label: "Unknown",
+      status: "active",
+      created_at: "2025-01-01T00:00:00Z",
+      updated_at: "2025-01-01T00:00:00Z",
+    } as Entity;
+    const entities = new Map<string, Entity>([["x1", entity]]);
+
+    const { queryByTestId } = render(
+      <DetailPanel entity={entity} entities={entities} onClose={vi.fn()} />,
+    );
+
+    expect(queryByTestId("decision-detail")).toBeNull();
+    expect(queryByTestId("structural-detail")).toBeNull();
+  });
 });

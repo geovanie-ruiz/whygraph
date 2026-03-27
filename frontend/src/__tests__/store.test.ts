@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { applyEvent, type Entity, type EntityChangeEvent } from "../lib/store";
+import { renderHook } from "@testing-library/react";
+import React, { createElement } from "react";
+import { applyEvent, useEntityStore, EntityStoreContext, type Entity, type EntityChangeEvent, type EntityStoreState } from "../lib/store.js";
 
 function makeNode(id: string, name: string): Entity {
   return {
@@ -119,5 +121,54 @@ describe("applyEvent", () => {
       entities: [],
     });
     expect(result.size).toBe(0);
+  });
+
+  it("CREATED with no entity returns current map", () => {
+    const existing = new Map<string, Entity>([
+      ["n1", makeNode("n1", "Auth")],
+    ]);
+    const result = applyEvent(existing, { type: "CREATED" });
+    expect(result).toBe(existing);
+  });
+
+  it("UPDATED with no entity returns current map", () => {
+    const existing = new Map<string, Entity>([
+      ["n1", makeNode("n1", "Auth")],
+    ]);
+    const result = applyEvent(existing, { type: "UPDATED" });
+    expect(result).toBe(existing);
+  });
+
+  it("unknown event type returns current map", () => {
+    const existing = new Map<string, Entity>([
+      ["n1", makeNode("n1", "Auth")],
+    ]);
+    const result = applyEvent(existing, { type: "UNKNOWN" as any });
+    expect(result).toBe(existing);
+  });
+
+  it("DELETED with no entityId returns current map", () => {
+    const existing = new Map<string, Entity>([
+      ["n1", makeNode("n1", "Auth")],
+    ]);
+    const result = applyEvent(existing, { type: "DELETED" });
+    expect(result).toBe(existing);
+  });
+});
+
+describe("useEntityStore", () => {
+  it("useEntityStore returns context value", () => {
+    const state: EntityStoreState = {
+      entities: new Map([["n1", makeNode("n1", "Auth")]]),
+      connected: true,
+    };
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      createElement(EntityStoreContext.Provider, { value: state }, children);
+
+    const { result } = renderHook(() => useEntityStore(), { wrapper });
+
+    expect(result.current.connected).toBe(true);
+    expect(result.current.entities.size).toBe(1);
+    expect(result.current.entities.get("n1")?.id).toBe("n1");
   });
 });

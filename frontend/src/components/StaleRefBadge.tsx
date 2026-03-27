@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "urql";
 import "../styles/components/stale-ref-badge.css";
 
@@ -81,8 +81,8 @@ export function StaleRefBadge({ onStaleRefIdsChange }: StaleRefBadgeProps) {
   const [modalRef, setModalRef] = useState<StaleRef | null>(null);
   const [newPath, setNewPath] = useState("");
 
-  const validationErrors = result.data?.validationErrors ?? [];
-  const staleRefs = extractStaleRefs(validationErrors);
+  const validationErrors = useMemo(() => result.data?.validationErrors ?? [], [result.data?.validationErrors]);
+  const staleRefs = useMemo(() => extractStaleRefs(validationErrors), [validationErrors]);
 
   useEffect(() => {
     onStaleRefIdsChange(new Set(staleRefs.map((r) => r.entityId)));

@@ -203,4 +203,39 @@ describe("TreeNav component", () => {
     expect(getByText("Decisions")).toBeTruthy();
     expect(getByText("Choose DB")).toBeTruthy();
   });
+
+  it("shows stale ref badge for nodes with stale refs", () => {
+    const { container } = render(
+      <TreeNav
+        entities={baseEntities}
+        selectedEntityId={null}
+        onNodeClick={vi.fn()}
+        staleRefIds={new Set(["app"])}
+      />,
+    );
+
+    const badge = container.querySelector(".tree-node__badge--stale");
+    expect(badge).toBeTruthy();
+  });
+
+  it("renders decision buttons under expanded component", () => {
+    const entities = new Map<string, Entity>([
+      ...baseEntities,
+      ["d1", makeDecision("d1", "Use JWT", ["c1"])],
+    ]);
+
+    const { container, getByTitle } = render(
+      <TreeNav
+        entities={entities}
+        selectedEntityId={null}
+        onNodeClick={vi.fn()}
+      />,
+    );
+
+    // Expand the feature to reveal components and decisions
+    const arrow = container.querySelector(".tree-accordion__arrow")!;
+    fireEvent.click(arrow);
+
+    expect(getByTitle("Use JWT")).toBeTruthy();
+  });
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "urql";
 import "../styles/components/gap-highlight.css";
 
@@ -28,7 +28,7 @@ export function GapHighlight({ onGapIdsChange }: GapHighlightProps) {
     query: GAPS_QUERY,
   });
 
-  const gaps = result.data?.gaps ?? [];
+  const gaps = useMemo(() => result.data?.gaps ?? [], [result.data?.gaps]);
   const gapCount = gaps.length;
 
   useEffect(() => {

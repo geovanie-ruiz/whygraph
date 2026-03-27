@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import { Provider } from "urql";
 import { fromValue, never } from "wonka";
-import { SupersedeReview } from "../../components/SupersedeReview";
+import { SupersedeReview } from "../../components/SupersedeReview.js";
 
 const sampleCandidates = [
   {
@@ -105,5 +105,42 @@ describe("SupersedeReview", () => {
 
     expect(screen.queryByTestId("candidate-wg-d2-wg-d1")).toBeNull();
     expect(screen.getByTestId("supersede-empty")).toBeDefined();
+  });
+
+  it("shows loading state", () => {
+    const client = {
+      executeQuery: () => never,
+      executeMutation: () => fromValue({ data: {} }),
+      executeSubscription: () => never,
+    } as never;
+
+    render(
+      <Provider value={client}>
+        <SupersedeReview />
+      </Provider>,
+    );
+
+    expect(screen.getByText("Loading candidates...")).toBeDefined();
+  });
+
+  it("shows error state", () => {
+    const client = {
+      executeQuery: () =>
+        fromValue({
+          data: null,
+          error: { message: "Network failure", name: "CombinedError" },
+        }),
+      executeMutation: () => fromValue({ data: {} }),
+      executeSubscription: () => never,
+    } as never;
+
+    render(
+      <Provider value={client}>
+        <SupersedeReview />
+      </Provider>,
+    );
+
+    expect(screen.getByRole("alert")).toBeDefined();
+    expect(screen.getByText(/Network failure/)).toBeDefined();
   });
 });
