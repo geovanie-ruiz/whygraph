@@ -28,11 +28,21 @@ npx whygraph init
 npx whygraph up
 ```
 
-`init` walks you through environment selection, registers the MCP server, and writes agent instructions to `CLAUDE.md` or `AGENTS.md`. `up` starts the server in the background.
+`init` walks you through two prompts — app name and environment — then registers the MCP server and writes agent instructions to `CLAUDE.md` (Claude Code) or `AGENTS.md` (Cursor, Copilot, other).
 
 ```text
-whygraph server running at http://localhost:4777
-Watching .whygraph/graph/ — 0 entities loaded
+Initialized whygraph in .whygraph/
+  App node: wg-ab12
+  Config: /your/project/.whygraph/config.yaml
+  MCP: registered
+
+Run 'whygraph up' to start the server.
+```
+
+`up` starts the server in the background:
+
+```text
+whygraph server running at http://localhost:4777 (pid 12345)
 ```
 
 From here, agents capture decisions automatically as they work. Run `whygraph viz` to open the graph visualization.
@@ -79,7 +89,7 @@ Whygraph exposes six MCP tools for agent integration. Read tools are always avai
 | `whygraph_create_decision(...)`   | write | Create a decision with full validation                  |
 | `whygraph_create_node(...)`       | write | Create a structural node                                |
 
-In default mode, agents write decision files directly to `.whygraph/graph/`. The file watcher picks them up, validates, and flags issues as JSON sidecars.
+In default mode, write tools are not registered. Agents write decision files directly to `.whygraph/graph/` as markdown. The file watcher picks them up, validates, and flags issues as JSON sidecars that the `whygraph issues` command can resolve.
 
 ---
 
@@ -100,7 +110,7 @@ Whygraph works with any AI development environment.
 
 ## The Graph
 
-<!-- [GIF: decision file dropped into .whygraph/graph/, node appearing live in the visualization] -->
+<!-- GIF placeholder — coming soon -->
 
 Whygraph models your application as a hierarchy of nodes with decisions attached to the nodes they affect.
 
@@ -165,7 +175,7 @@ All commands accept `--json` for programmatic output.
 
 ## Limitations
 
-- The server must be running for the MCP tools and live visualization to work. Agents in default mode can write decision files directly without it.
+- The server must be running for MCP read tools and live visualization to work. In default mode, agents can write decision files directly to `.whygraph/graph/` without the server — they'll be picked up when it starts.
 - Multi-agent worktree support detects divergence but does not auto-merge. Conflict resolution follows standard git workflow.
 - The fixed tag taxonomy (`arch`, `data`, `security`, `performance`, `integration`, `infra`, `ux`) is intentional — it keeps decisions queryable. Custom tags are not supported in v1.
 - No cloud sync or hosted option. The graph is local to your repo.
