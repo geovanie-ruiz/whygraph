@@ -54,8 +54,8 @@ describe("registerValidateCommand", () => {
     await program.parseAsync(["node", "whygraph", "validate", "--json"]);
     const output = (stdoutSpy.mock.calls.map((c) => c[0]).join("")) as string;
     const parsed = JSON.parse(output);
-    expect(parsed).toHaveProperty("filesChecked");
-    expect(parsed).toHaveProperty("errors");
+    expect(parsed.filesChecked).toBe(0);
+    expect(parsed.errors).toHaveLength(0);
   });
 
   it("outputs error table when errors are present", async () => {

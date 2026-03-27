@@ -5,6 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/whygraph)](https://www.npmjs.com/package/whygraph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js >= 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+[![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)]()
 
 > Whygraph captures the architectural decisions behind your codebase — the tradeoffs accepted, the alternatives rejected, the patterns you deliberately chose — and makes them queryable by AI agents before they write a single line.
 

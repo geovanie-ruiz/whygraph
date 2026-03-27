@@ -227,14 +227,7 @@ describe("ServerCore", () => {
 
       // After load, stale issue should be deleted since entity doesn't exist
       const issueFile = path.join(issuesDir, "wg-stale.json");
-      try {
-        await fs.access(issueFile);
-        // If we get here, the file still exists — that's a test failure
-        expect(true).toBe(false);
-      } catch {
-        // File deleted — expected
-        expect(true).toBe(true);
-      }
+      await expect(fs.access(issueFile)).rejects.toThrow();
     });
   });
 
