@@ -13,17 +13,20 @@ Deployment is triggered by creating a GitHub Release tied to a version tag (e.g.
 
 ## Upfront Setup (one-time)
 
-### 1. Get an npm automation token
+### 1. Register a Trusted Publisher on npmjs.com
 
-1. Log in to [npmjs.com](https://www.npmjs.com)
-2. Avatar → **Access Tokens** → **Generate New Token** → **Automation**
-3. Copy the token
+Trusted Publishers uses OIDC — GitHub proves its identity to npm at publish time. No token is stored anywhere.
 
-### 2. Add `NPM_TOKEN` to GitHub Secrets
+1. Go to `https://www.npmjs.com/package/whygraph/settings`
+2. Find the **Trusted Publishers** section → **Add a Trusted Publisher** → select **GitHub Actions**
+3. Fill in:
+   - **Organization or username:** `geovanie-ruiz`
+   - **Repository:** `whygraph`
+   - **Workflow filename:** `publish.yml`
+   - **Environment:** leave blank
+4. Save
 
-1. Go to your repo on GitHub → **Settings** → **Secrets and variables** → **Actions**
-2. Click **New repository secret**
-3. Name: `NPM_TOKEN`, value: the token from step 1
+That's all. No secret to copy, no token to rotate. The `publish.yml` workflow uses `permissions: id-token: write` to request an OIDC token from GitHub, which npm validates against this registration.
 
 ### 3. Get frontend to 100% coverage
 
@@ -61,7 +64,7 @@ thresholds: {
 
 With thresholds in place, `vitest run --coverage` exits with code 1 if coverage drops below 100%. CI will fail automatically.
 
-### 5. Create the workflow files
+### 5. Create the workflow files (already done — see `.github/workflows/`)
 
 Create `.github/workflows/ci.yml`:
 
