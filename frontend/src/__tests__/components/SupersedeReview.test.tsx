@@ -107,6 +107,30 @@ describe("SupersedeReview", () => {
     expect(screen.getByTestId("supersede-empty")).toBeDefined();
   });
 
+  it("falls back to raw candidate IDs when entity queries return no data", () => {
+    const client = {
+      executeQuery: () =>
+        fromValue({
+          data: {
+            supersedeCandidates: sampleCandidates,
+            entity: null, // entity query returns no data → title falls back to ID
+          },
+        }),
+      executeMutation: () => fromValue({ data: {} }),
+      executeSubscription: () => never,
+    } as never;
+
+    render(
+      <Provider value={client}>
+        <SupersedeReview />
+      </Provider>,
+    );
+
+    // With entity: null, titles fall back to the raw decision IDs
+    expect(screen.getByText("wg-d2")).toBeDefined();
+    expect(screen.getByText("wg-d1")).toBeDefined();
+  });
+
   it("shows loading state", () => {
     const client = {
       executeQuery: () => never,

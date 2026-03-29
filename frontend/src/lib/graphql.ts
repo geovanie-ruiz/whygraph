@@ -13,8 +13,10 @@ function getHttpEndpoint(): string {
 
 function getWsEndpoint(): string {
   if (typeof window !== "undefined") {
+    /* v8 ignore next -- jsdom protocol is always "http:", so the "wss:" branch is unreachable in tests */
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
     // In dev with Vite proxy, connect through the proxy
+    /* v8 ignore next 4 -- import.meta.env.DEV is always true in vitest; the fall-through path is unreachable */
     if (import.meta.env.DEV) {
       return `${proto}//${window.location.host}/api/graphql`;
     }
@@ -33,6 +35,7 @@ export const urqlClient = createClient({
     fetchExchange,
     subscriptionExchange({
       forwardSubscription(request) {
+        /* v8 ignore next -- urql always provides a non-empty query string; the "" fallback is unreachable in tests */
         const input = { ...request, query: request.query || "" };
         return {
           /* v8 ignore next 4 -- inner subscribe is called by urql's subscription exchange internals; exercised in graphql.test.ts but V8 doesn't attribute coverage through the wonka/urql callback chain */

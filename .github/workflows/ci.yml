@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install backend deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Backend tests (100% coverage enforced)
+        run: npx vitest run --coverage
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend tests (100% coverage enforced)
+        working-directory: frontend
+        run: npx vitest run --coverage

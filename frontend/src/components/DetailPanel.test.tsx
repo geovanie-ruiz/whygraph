@@ -154,6 +154,44 @@ describe("DetailPanel", () => {
     expect(getByText("Context too short")).toBeTruthy();
   });
 
+  it("shows raw id when affects entry has no matching entity", () => {
+    // resolveEntityName: when entities.get(id) returns undefined, the raw id is returned
+    const decision = makeDecision({ affects: ["ghost-id"] });
+    const entities = new Map<string, Entity>([["d1", decision]]);
+
+    const { getByText } = render(
+      <DetailPanel entity={decision} entities={entities} onClose={vi.fn()} />,
+    );
+
+    // "ghost-id" is not in entities, so the raw id string is displayed
+    expect(getByText("ghost-id")).toBeTruthy();
+  });
+
+  it("shows error status in structural detail when errors are passed", () => {
+    const structural = makeStructural();
+    const entities = new Map<string, Entity>([["s1", structural]]);
+    const errors = [{ field: "name", message: "Name required", severity: "error" }];
+
+    const { container } = render(
+      <DetailPanel entity={structural} entities={entities} onClose={vi.fn()} errors={errors} />,
+    );
+
+    expect(container.querySelector(".detail-status--error")).toBeTruthy();
+  });
+
+  it("shows ref without symbol (no parenthetical)", () => {
+    const structural = makeStructural({ refs: [{ file: "src/foo.ts" }] });
+    const entities = new Map<string, Entity>([["s1", structural]]);
+
+    const { getByText, queryByText } = render(
+      <DetailPanel entity={structural} entities={entities} onClose={vi.fn()} />,
+    );
+
+    expect(getByText(/src\/foo\.ts/)).toBeTruthy();
+    // No symbol means no "(AuthService)" suffix
+    expect(queryByText(/\(/)).toBeNull();
+  });
+
   it("renders null for entity with neither name nor title", () => {
     const entity = {
       id: "x1",

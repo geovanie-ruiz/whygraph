@@ -242,6 +242,80 @@ describe("App", () => {
     }
   });
 
+  it("deselects entity when SVG background is clicked (onDeselect)", () => {
+    const { container } = render(<App />);
+
+    const node = makeStructuralNode({ id: "n1", name: "Alpha", label: "Component" });
+    injectEntities([node]);
+
+    // Select the node first
+    fireEvent.click(screen.getAllByText("Alpha")[0]);
+
+    // Click the SVG background to deselect
+    const svg = container.querySelector('[data-testid="graph-view"]')!;
+    fireEvent.click(svg);
+
+    // Selection ring should be gone (onDeselect sets selectedEntityId to null)
+    expect(svg.querySelectorAll(".selection-ring").length).toBe(0);
+  });
+
+  it("clears selection when fitAll is triggered (onFitAll)", () => {
+    const { container } = render(<App />);
+
+    const node = makeStructuralNode({ id: "n1", name: "Beta", label: "Component" });
+    injectEntities([node]);
+
+    // Select the node
+    fireEvent.click(screen.getAllByText("Beta")[0]);
+
+    // Click the fit-all button
+    const fitBtn = screen.getByRole("button", { name: "Fit graph to view" });
+    fireEvent.click(fitBtn);
+
+    // onFitAll sets selectedEntityId to null → no selection ring
+    const svg = container.querySelector('[data-testid="graph-view"]')!;
+    expect(svg.querySelectorAll(".selection-ring").length).toBe(0);
+  });
+
+  it("closes detail panel when close button is clicked (onClose)", () => {
+    const { container } = render(<App />);
+
+    const node = makeStructuralNode({ id: "n1", name: "Gamma", label: "Component" });
+    injectEntities([node]);
+
+    // Select a node to open the detail panel
+    fireEvent.click(screen.getAllByText("Gamma")[0]);
+
+    // Panel should be open
+    const panel = container.querySelector('[data-testid="detail-panel"]')!;
+    expect(panel.getAttribute("data-open")).toBe("true");
+
+    // Click close
+    fireEvent.click(container.querySelector('[data-testid="detail-close"]')!);
+
+    // Panel should be closed
+    expect(panel.getAttribute("data-open")).toBe("false");
+  });
+
+  it("handles selectedEntityId pointing to an entity no longer in the map", () => {
+    // Covers: selectedEntity = selectedEntityId ? entities.get(selectedEntityId) ?? null : null
+    // The ?? null branch fires when selectedEntityId is set but the entity was removed.
+    render(<App />);
+
+    const node = makeStructuralNode({ id: "temp-1", name: "TempNode", label: "Component" });
+    injectEntities([node]);
+
+    // Select the node
+    const nodeText = screen.getAllByText("TempNode")[0];
+    fireEvent.click(nodeText);
+
+    // Now remove it from the snapshot — entities map no longer has "temp-1"
+    injectEntities([]);
+
+    // App should still render; selectedEntity falls back to null via ??
+    expect(screen.getByText("whygraph")).toBeDefined();
+  });
+
   it("includes superseded decision in tag-filtered results", () => {
     render(<App />);
 

@@ -63,6 +63,14 @@ describe("ThemeProvider", () => {
     spy.mockRestore();
   });
 
+  it("default context toggle is a callable no-op (exercises the context default value)", () => {
+    // useTheme without ThemeProvider returns the default context value,
+    // which has toggle: () => {}. Calling it must not throw.
+    const { result } = renderHook(() => useTheme());
+    expect(result.current.theme).toBe("dark");
+    expect(() => result.current.toggle()).not.toThrow();
+  });
+
   it("handles localStorage.setItem failure gracefully", () => {
     const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("storage unavailable");

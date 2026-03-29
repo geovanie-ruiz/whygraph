@@ -131,6 +131,83 @@ describe("DecisionList", () => {
     expect(archButton.getAttribute("aria-pressed")).toBe("false");
   });
 
+  it("shows error message when query returns an error", () => {
+    const client = makeClient({
+      error: { message: "fetch failed", name: "CombinedError" },
+    });
+
+    render(
+      <Provider value={client}>
+        <DecisionList />
+      </Provider>,
+    );
+
+    expect(screen.getByRole("alert")).toBeDefined();
+    expect(screen.getByText(/fetch failed/)).toBeDefined();
+  });
+
+  it("shows loading indicator when fetching", () => {
+    const client = {
+      executeQuery: () => never,
+      executeMutation: () => never,
+      executeSubscription: () => never,
+    } as never;
+
+    render(
+      <Provider value={client}>
+        <DecisionList />
+      </Provider>,
+    );
+
+    expect(screen.getByText("Loading...")).toBeDefined();
+  });
+
+  it("uses empty array fallback when search returns null data", async () => {
+    vi.useFakeTimers();
+
+    const client = {
+      executeQuery: ({ variables }: { variables: Record<string, unknown> }) => {
+        if ("query" in variables) {
+          return fromValue({ data: { search: null } });
+        }
+        return fromValue({ data: { decisions: [] } });
+      },
+      executeMutation: () => never,
+      executeSubscription: () => never,
+    } as never;
+
+    render(
+      <Provider value={client}>
+        <DecisionList />
+      </Provider>,
+    );
+
+    const searchInput = screen.getByPlaceholderText("Search decisions...");
+    fireEvent.change(searchInput, { target: { value: "nothing" } });
+
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(screen.getByTestId("empty-state")).toBeDefined();
+
+    vi.useRealTimers();
+  });
+
+  it("changes status filter via dropdown", () => {
+    const client = makeClient({ data: { decisions: [] } });
+
+    render(
+      <Provider value={client}>
+        <DecisionList />
+      </Provider>,
+    );
+
+    const select = screen.getByLabelText("Filter by status");
+    fireEvent.change(select, { target: { value: "active" } });
+    expect((select as HTMLSelectElement).value).toBe("active");
+  });
+
   it("uses search results when search text is present", async () => {
     vi.useFakeTimers();
 

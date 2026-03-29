@@ -317,4 +317,36 @@ describe("GraphView", () => {
     const tspans = svg.querySelectorAll("tspan");
     expect(tspans.length).toBeGreaterThan(2);
   });
+
+  it("renders node with unknown label using default radius and color", () => {
+    // An entity with a label not in the known set hits the default branches
+    // in nodeRadius (returns 10) and nodeColor (returns "#999").
+    const entities = new Map<string, Entity>([
+      ["b1", makeStructural("b1", "BugReport", "Bug")],
+    ]);
+    const { getByTestId } = render(
+      <GraphView entities={entities} onSelect={vi.fn()} />,
+    );
+    const svg = getByTestId("graph-view");
+    // Node is rendered — confirms the default switch branches didn't throw
+    expect(svg.querySelectorAll("g.node-group").length).toBe(1);
+    expect(screen.getByText("BugReport")).toBeDefined();
+  });
+
+  it("does not crash when selectedEntityId has no matching node", () => {
+    // When selectedEntityId points to an ID not in the rendered graph,
+    // the selection effect hits `if (target.empty()) return` without throwing.
+    const entities = new Map<string, Entity>([
+      ["n1", makeStructural("n1", "Auth")],
+    ]);
+    expect(() =>
+      render(
+        <GraphView
+          entities={entities}
+          onSelect={vi.fn()}
+          selectedEntityId="nonexistent-id"
+        />,
+      ),
+    ).not.toThrow();
+  });
 });

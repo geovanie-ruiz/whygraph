@@ -14,6 +14,12 @@ export default defineConfig({
         "src/**/*.d.ts",
       ],
       reportsDirectory: "./coverage",
+      thresholds: {
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100,
+      },
     },
   },
 });
