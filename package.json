@@ -1,6 +1,6 @@
 {
   "name": "whygraph",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The graph of why. So your agent knows before it touches anything.",
   "author": "Geovanie Ruiz",
   "license": "MIT",
