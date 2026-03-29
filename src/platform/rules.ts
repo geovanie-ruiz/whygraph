@@ -71,10 +71,15 @@ function generateInstructions(config: WhygraphConfig): string {
     "",
     `Allowed tags: ${tagList}`,
     "",
-    "### MCP Server",
+    "### MCP Server (preferred)",
     "",
-    `Use the \`whygraph\` MCP server for decision capture tools.`,
-    "If the server is unreachable, write decision files directly to `.whygraph/graph/`.",
+    `Use the \`whygraph\` MCP server for decision capture tools when available.`,
+    "",
+    "### Direct File Write (fallback)",
+    "",
+    "If the MCP server is unreachable or MCP is blocked by your environment,",
+    "write the decision file directly to `.whygraph/graph/` using the format above.",
+    "The file will be picked up automatically on next server start.",
     "",
     "### Server Status",
     "",
@@ -106,7 +111,7 @@ function upsertMarkedSection(existing: string, content: string): string {
 
 function registerMcpWithClaude(projectDir: string): boolean {
   try {
-    execSync("claude mcp add --scope project whygraph -- whygraph mcp", {
+    execSync("claude mcp add --scope project whygraph -- npx whygraph mcp", {
       cwd: projectDir,
       stdio: "ignore",
     });
@@ -122,7 +127,7 @@ function registerMcpWithClaude(projectDir: string): boolean {
       }
       const servers = (mcpJson.mcpServers ?? {}) as Record<string, unknown>;
       if (!servers.whygraph) {
-        servers.whygraph = { type: "stdio", command: "whygraph", args: ["mcp"] };
+        servers.whygraph = { type: "stdio", command: "npx", args: ["whygraph", "mcp"] };
         mcpJson.mcpServers = servers;
         writeFileSync(mcpJsonPath, JSON.stringify(mcpJson, null, 2) + "\n", "utf-8");
       }
@@ -145,7 +150,7 @@ function registerMcpWithCursor(projectDir: string): boolean {
     }
     const servers = (mcp.mcpServers ?? {}) as Record<string, unknown>;
     if (!servers.whygraph) {
-      servers.whygraph = { command: "whygraph", args: ["mcp"] };
+      servers.whygraph = { command: "npx", args: ["whygraph", "mcp"] };
       mcp.mcpServers = servers;
       writeFileSync(mcpPath, JSON.stringify(mcp, null, 2) + "\n", "utf-8");
     }
@@ -166,7 +171,7 @@ function registerMcpWithCopilot(projectDir: string): boolean {
     }
     const servers = (mcp.servers ?? {}) as Record<string, unknown>;
     if (!servers.whygraph) {
-      servers.whygraph = { type: "stdio", command: "whygraph", args: ["mcp"] };
+      servers.whygraph = { type: "stdio", command: "npx", args: ["whygraph", "mcp"] };
       mcp.servers = servers;
       writeFileSync(mcpPath, JSON.stringify(mcp, null, 2) + "\n", "utf-8");
     }
@@ -189,7 +194,7 @@ function writeMcpSetupMd(projectDir: string, environment: Environment): string {
         "Run the following command in your project root:",
         "",
         "```bash",
-        "claude mcp add --scope project whygraph -- whygraph mcp",
+        "claude mcp add --scope project whygraph -- npx whygraph mcp",
         "```",
       );
       break;
@@ -199,7 +204,7 @@ function writeMcpSetupMd(projectDir: string, environment: Environment): string {
         "",
         "```json",
         JSON.stringify(
-          { mcpServers: { whygraph: { command: "whygraph", args: ["mcp"] } } },
+          { mcpServers: { whygraph: { command: "npx", args: ["whygraph", "mcp"] } } },
           null,
           2,
         ),
@@ -212,7 +217,7 @@ function writeMcpSetupMd(projectDir: string, environment: Environment): string {
         "",
         "```json",
         JSON.stringify(
-          { servers: { whygraph: { type: "stdio", command: "whygraph", args: ["mcp"] } } },
+          { servers: { whygraph: { type: "stdio", command: "npx", args: ["whygraph", "mcp"] } } },
           null,
           2,
         ),
@@ -223,7 +228,7 @@ function writeMcpSetupMd(projectDir: string, environment: Environment): string {
       lines.push(
         "Add the whygraph MCP server to your AI assistant's MCP configuration.",
         "",
-        "**Command:** `whygraph mcp`",
+        "**Command:** `npx whygraph mcp`",
         "**Transport:** stdio",
         "",
         "Refer to your AI assistant's documentation for how to register MCP servers.",

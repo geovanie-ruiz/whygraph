@@ -58,7 +58,8 @@ describe("writePlatformRules", () => {
 
     const mcp = JSON.parse(readFileSync(mcpJsonPath, "utf-8"));
     expect(mcp.mcpServers.whygraph).toBeDefined();
-    expect(mcp.mcpServers.whygraph.command).toBe("whygraph");
+    expect(mcp.mcpServers.whygraph.command).toBe("npx");
+    expect(mcp.mcpServers.whygraph.args[0]).toBe("whygraph");
   });
 
   it("claude-code: does not duplicate MCP entry on re-run", () => {
