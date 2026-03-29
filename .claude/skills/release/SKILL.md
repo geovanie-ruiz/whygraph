@@ -1,3 +1,9 @@
+---
+name: release
+description: Bump version, commit, tag, and push to prepare a GitHub Release. Asks whether the change is patch, minor, or major.
+user-invocable: true
+---
+
 You are running the `/release` skill for the whygraph project.
 
 Your job is to bump the version, commit, tag, and push — preparing the repo for a GitHub Release.
