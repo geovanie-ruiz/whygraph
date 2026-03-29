@@ -81,11 +81,29 @@ describe("writePlatformRules", () => {
     expect(content).toContain("<!-- whygraph:start -->");
   });
 
-  it("copilot: writes to AGENTS.md", () => {
+  it("copilot: writes to .github/copilot-instructions.md", () => {
     const result = writePlatformRules(tempDir, "copilot", "", TEST_CONFIG);
 
     expect(result.environment).toBe("copilot");
-    expect(result.filePath).toBe(join(tempDir, "AGENTS.md"));
+    expect(result.filePath).toBe(join(tempDir, ".github", "copilot-instructions.md"));
+    const content = readFileSync(result.filePath, "utf-8");
+    expect(content).toContain("<!-- whygraph:start -->");
+  });
+
+  it("copilot: writes to .github/copilot-instructions.md when .github already exists", () => {
+    mkdirSync(join(tempDir, ".github"), { recursive: true });
+    const result = writePlatformRules(tempDir, "copilot", "", TEST_CONFIG);
+
+    expect(result.filePath).toBe(join(tempDir, ".github", "copilot-instructions.md"));
+  });
+
+  it("copilot: upserts when copilot-instructions.md already exists", () => {
+    writePlatformRules(tempDir, "copilot", "", TEST_CONFIG);
+    const result = writePlatformRules(tempDir, "copilot", "", TEST_CONFIG);
+
+    const content = readFileSync(result.filePath, "utf-8");
+    const matches = content.match(/<!-- whygraph:start -->/g);
+    expect(matches).toHaveLength(1);
   });
 
   it("other: writes to AGENTS.md", () => {

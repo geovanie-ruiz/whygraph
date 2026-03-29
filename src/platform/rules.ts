@@ -257,7 +257,7 @@ export function writePlatformRules(
     case "copilot": {
       const mcpRegistered = registerMcpWithCopilot(projectDir);
       const mcpSetupPath = mcpRegistered ? undefined : writeMcpSetupMd(projectDir, environment);
-      return { ...writeAgentsMd(projectDir, instructions, environment), mcpRegistered, mcpSetupPath };
+      return { ...writeCopilotInstructions(projectDir, instructions), mcpRegistered, mcpSetupPath };
     }
     case "other": {
       const mcpSetupPath = writeMcpSetupMd(projectDir, environment);
@@ -301,4 +301,26 @@ function writeAgentsMd(
   writeFileSync(filePath, newContent, "utf-8");
 
   return { environment, filePath };
+}
+
+function writeCopilotInstructions(
+  projectDir: string,
+  instructions: string,
+): Omit<PlatformRulesResult, "mcpRegistered" | "mcpSetupPath"> {
+  const githubDir = join(projectDir, ".github");
+  if (!existsSync(githubDir)) {
+    mkdirSync(githubDir, { recursive: true });
+  }
+
+  const filePath = join(githubDir, "copilot-instructions.md");
+
+  let existing = "";
+  if (existsSync(filePath)) {
+    existing = readFileSync(filePath, "utf-8");
+  }
+
+  const newContent = upsertMarkedSection(existing, instructions);
+  writeFileSync(filePath, newContent, "utf-8");
+
+  return { environment: "copilot", filePath };
 }
