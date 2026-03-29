@@ -177,7 +177,8 @@ export function registerInitCommand(program: Command): void {
             `  App node: ${result.appId}\n` +
             `  Config: ${result.configPath}\n` +
             mcpLine +
-            `\nRun 'whygraph up' to start the server.\n`,
+            `\nRun 'npx whygraph up' to start the server.\n` +
+            `Run 'npx whygraph onboard' to get a prompt for building your graph.\n`,
           );
         }
       } catch (err: unknown) {

@@ -78,8 +78,8 @@ function generateInstructions(config: WhygraphConfig): string {
     "",
     "### Server Status",
     "",
-    "Run `whygraph status` to check if the server is running.",
-    "Run `whygraph up` to start the server.",
+    "Run `npx whygraph status` to check if the server is running.",
+    "Run `npx whygraph up` to start the server.",
     "",
   ].join("\n");
 }
