@@ -6,6 +6,7 @@ import { Command } from "commander";
 const require = createRequire(import.meta.url);
 const { version } = require("../../package.json") as { version: string };
 import { registerConfigCommand } from "./commands/config.js";
+import { registerCrossrefCommand } from "./commands/crossref.js";
 import { registerDownCommand } from "./commands/down.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerIssuesCommand } from "./commands/issues.js";
@@ -26,6 +27,7 @@ program
   .version(version);
 
 registerConfigCommand(program);
+registerCrossrefCommand(program);
 registerDownCommand(program);
 registerInitCommand(program);
 registerIssuesCommand(program);
